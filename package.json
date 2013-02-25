@@ -1,0 +1,11 @@
+{
+    "name": "bagarino"
+  , "version": "0.2.0"
+  , "private": true
+  , "dependencies": {
+      "express": ""
+    , "redis": ""
+    , "node_hash": ""
+    , "hiredis": ""
+  }
+}
