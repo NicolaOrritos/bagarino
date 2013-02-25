@@ -24,7 +24,15 @@ exports.new = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var ticket = hash.sha1(new Date().toString());
+        var now = new Date().getTime().toString();
+        
+        console.log("Generating ticket from current date and time (since epoch): %s", now);
+        
+        now += Math.random();
+        
+        console.log("After adding random salt: %s", now);
+        
+        var ticket = hash.sha1(now);
         
         // First save the "real" ticket:
         client.set(ticket, VALID_TICKET);
@@ -35,7 +43,7 @@ exports.new = function(req, res)
         client.expire(EXPIRED_PREFIX + ticket, REMEMBER_UNTIL);
         
         
-        var reply = {"result": "OK", "ticket": ticket};
+        var reply = {"result": "OK", "ticket": ticket, "expires_in": EXPIRES_IN};
         
         res.send(reply);
     });
@@ -56,9 +64,12 @@ exports.status = function(req, res)
                 
                 if (exists)
                 {
-                    var reply = {"status": VALID_TICKET};
-                    
-                    res.send(reply);
+                    client.ttl(ticket, function(error, ttl)
+                    {
+                        var reply = {"status": VALID_TICKET, "expires_in": ttl};
+                        
+                        res.send(reply);
+                    });
                 }
                 else
                 {
