@@ -11,8 +11,11 @@ client.on("error", function (err)
 
 var REDIS_DB = 3;
 
-var VALID_TICKET = "VALID";
 var NOT_VALID_TICKET = "NOT_VALID";
+
+var VALID_TICKET = "VALID";
+var VALID_PREFIX = "VALID:";
+
 var EXPIRED_TICKET = "EXPIRED";
 var EXPIRED_PREFIX = "EXPIRED:";
 
@@ -40,18 +43,20 @@ exports.new = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var ticket = createNewTicket();
+        var ticket_base = createNewTicket();
+        var valid_ticket   = VALID_PREFIX   + ticket_base;
+        var expired_ticket = EXPIRED_PREFIX + ticket_base;
         
         // First save the "real" ticket:
-        client.set(ticket, VALID_TICKET);
-        client.expire(ticket, DEFAULT_EXPIRES_IN);
+        client.set(valid_ticket, VALID_TICKET);
+        client.expire(valid_ticket, DEFAULT_EXPIRES_IN);
         
         // Then save the "to-be-expired" counterpart:
-        client.set(EXPIRED_PREFIX + ticket, EXPIRED_TICKET);
-        client.expire(EXPIRED_PREFIX + ticket, REMEMBER_UNTIL);
+        client.set(expired_ticket, EXPIRED_TICKET);
+        client.expire(expired_ticket, REMEMBER_UNTIL);
         
         
-        var reply = {"result": "OK", "ticket": ticket, "expires_in": DEFAULT_EXPIRES_IN};
+        var reply = {"result": "OK", "ticket": ticket_base, "expires_in": DEFAULT_EXPIRES_IN};
         
         res.send(reply);
     });
@@ -61,18 +66,18 @@ exports.status = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var ticket = req.param("ticket");
+        var ticket_base = req.param("ticket");
         
-        if (ticket)
+        if (ticket_base)
         {
-            client.exists(ticket, function(error, exists)
+            client.exists(VALID_PREFIX + ticket_base, function(error, exists)
             {
                 console.log("[tickets.status] exists returned: %s", exists);
                 console.log("[tickets.status] error was: %s", error);
                 
                 if (exists)
                 {
-                    client.ttl(ticket, function(error, ttl)
+                    client.ttl(VALID_PREFIX + ticket_base, function(error, ttl)
                     {
                         var reply = {"status": VALID_TICKET, "expires_in": ttl};
                         
@@ -82,7 +87,7 @@ exports.status = function(req, res)
                 else
                 {
                     // Check whether it expired:
-                    client.exists(EXPIRED_PREFIX + ticket, function(error, expired)
+                    client.exists(EXPIRED_PREFIX + ticket_base, function(error, expired)
                     {
                         console.log("[tickets.status] expired returned: %s", expired);
                         console.log("[tickets.status] error was: %s", error);
