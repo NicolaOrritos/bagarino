@@ -16,34 +16,42 @@ var NOT_VALID_TICKET = "NOT_VALID";
 var EXPIRED_TICKET = "EXPIRED";
 var EXPIRED_PREFIX = "EXPIRED:";
 
-var EXPIRES_IN = 60;  // Sixty seconds
+var DEFAULT_EXPIRES_IN = 60;  // Sixty seconds
 var REMEMBER_UNTIL = 60 * 60 * 24 * 10;  // Ten days
+
+
+function createNewTicket()
+{
+    var now = new Date().getTime().toString();
+        
+    console.log("Generating ticket from current date and time (since epoch): %s", now);
+    
+    now += Math.random();
+    
+    console.log("After adding random salt: %s", now);
+    
+    var ticket = hash.sha1(now);
+    
+    return ticket;
+}
 
 
 exports.new = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var now = new Date().getTime().toString();
-        
-        console.log("Generating ticket from current date and time (since epoch): %s", now);
-        
-        now += Math.random();
-        
-        console.log("After adding random salt: %s", now);
-        
-        var ticket = hash.sha1(now);
+        var ticket = createNewTicket();
         
         // First save the "real" ticket:
         client.set(ticket, VALID_TICKET);
-        client.expire(ticket, EXPIRES_IN);
+        client.expire(ticket, DEFAULT_EXPIRES_IN);
         
         // Then save the "to-be-expired" counterpart:
         client.set(EXPIRED_PREFIX + ticket, EXPIRED_TICKET);
         client.expire(EXPIRED_PREFIX + ticket, REMEMBER_UNTIL);
         
         
-        var reply = {"result": "OK", "ticket": ticket, "expires_in": EXPIRES_IN};
+        var reply = {"result": "OK", "ticket": ticket, "expires_in": DEFAULT_EXPIRES_IN};
         
         res.send(reply);
     });
