@@ -2,7 +2,7 @@ bagarino
 ==========
 
 "bagarino" _sells_ you tickets and can tell a real ticket from a fake one. Simple, fast and RESTful.
-Ask him for a new ticket and it'll give you. Then ask him whether a ticket is OK or expired. Or whether it is a fake. It'll knoe for sure.
+Ask him for a new ticket and it'll give you. Then ask him whether a ticket is OK or expired. Or whether it is a fake. It'll know for sure.
 When tickets expire simply ask bagarino for new ones.
 
 
