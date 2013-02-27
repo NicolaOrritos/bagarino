@@ -42,6 +42,7 @@ app.configure('production', function()
 // Routes
 app.get('/tickets/new', routes.tickets.new);
 app.get('/tickets/:ticket/status', routes.tickets.status);
+app.get('/tickets/:ticket/expire', routes.tickets.expire);
 
 
 app.listen(PORT);
