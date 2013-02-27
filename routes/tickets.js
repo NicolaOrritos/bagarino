@@ -19,9 +19,85 @@ var VALID_PREFIX = "VALID:";
 var EXPIRED_TICKET = "EXPIRED";
 var EXPIRED_PREFIX = "EXPIRED:";
 
-var DEFAULT_EXPIRES_IN = 60;  // Sixty seconds
-var REMEMBER_UNTIL = 60 * 60 * 24 * 10;  // Ten days
+var DEFAULT_EXPIRES_IN_SECONDS  = 60;
+var DEFAULT_EXPIRES_IN_REQUESTS = 100;
 
+var DEFAULT_REMEMBER_UNTIL = 60 * 60 * 24 * 10;  // Ten days
+
+
+function calculateExpirationPolicy(query_string, save_ticket)
+{
+    if (save_ticket)
+    if (query_string)
+    {
+        var policy = {
+            time_based: false,
+            requests_based: false,
+            manual_expiration: false,
+            
+            expires_in: undefined,
+            remember_until: DEFAULT_REMEMBER_UNTIL
+        };
+        
+        
+        if (query_string.policy == "requests_based")
+        {
+            policy.requests_based = true;
+            
+            if (query_string.requests)
+            {
+                var reqs = parseInt(query_string.requests);
+                
+                if (secs != NaN)
+                {
+                    policy.expires_in = reqs;
+                }
+                else
+                {
+                    policy.expires_in = DEFAULT_EXPIRES_IN_REQUESTS;
+                }
+            }
+            else
+            {
+                policy.expires_in = DEFAULT_EXPIRES_IN_REQUESTS;
+            }
+        }
+        else if (query_string.policy == "manual_expiration")
+        {
+            policy.manual_expiration = true;
+        }
+        // Default to time_based policy
+        else  // if (query_string.policy == "time_based")
+        {
+            policy.time_based = true;
+            
+            if (query_string.seconds)
+            {
+                var secs = parseInt(query_string.seconds);
+                
+                if (secs != NaN)
+                {
+                    policy.expires_in = secs;
+                }
+                else
+                {
+                    policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
+                }
+            }
+            else
+            {
+                policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
+            }
+        }
+        
+        save_ticket.call(this, policy);
+    }
+    else
+    {
+        // Call the save_ticket function passing undefined:
+        save_ticket.call(this);
+    }
+}
 
 function createNewTicket()
 {
@@ -38,27 +114,73 @@ function createNewTicket()
     return ticket;
 }
 
+function handleTimeBasedTicketResponse(ticket_base, res)
+{
+    client.ttl(VALID_PREFIX + ticket_base, function(error, ttl)
+    {
+        var reply = {"status": VALID_TICKET, "expires_in": ttl};
+        
+        res.send(reply);
+    });
+}
+
+function handleRequestsBasedTicketResponse(ticket_base, res)
+{
+    // TODO
+}
+
+function handleManualTicketResponse(ticket_base, res)
+{
+    // TODO
+}
+
 
 exports.new = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var ticket_base = createNewTicket();
-        var valid_ticket   = VALID_PREFIX   + ticket_base;
-        var expired_ticket = EXPIRED_PREFIX + ticket_base;
-        
-        // First save the "real" ticket:
-        client.set(valid_ticket, VALID_TICKET);
-        client.expire(valid_ticket, DEFAULT_EXPIRES_IN);
-        
-        // Then save the "to-be-expired" counterpart:
-        client.set(expired_ticket, EXPIRED_TICKET);
-        client.expire(expired_ticket, REMEMBER_UNTIL);
-        
-        
-        var reply = {"result": "OK", "ticket": ticket_base, "expires_in": DEFAULT_EXPIRES_IN};
-        
-        res.send(reply);
+        calculateExpirationPolicy(req.query, function(policy)
+        {
+            if (policy)
+            {
+                if (policy.time_based)
+                {
+                    var ticket_base = createNewTicket();
+                    var valid_ticket   = VALID_PREFIX   + ticket_base;
+                    var expired_ticket = EXPIRED_PREFIX + ticket_base;
+                    
+                    
+                    // First save the "real" ticket:
+                    client.hset(valid_ticket, "content", VALID_TICKET);
+                    client.hset(valid_ticket, "policy", JSON.stringify(policy));
+                    client.expire(valid_ticket, policy.expires_in);
+                    
+                    // Then save the "to-be-expired" counterpart:
+                    client.set(expired_ticket, EXPIRED_TICKET);
+                    client.expire(expired_ticket, policy.remember_until);
+                    
+                    
+                    var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in};
+                    
+                    res.send(reply);
+                }
+                else if (policy.requests_based)
+                {
+                    // TODO
+                }
+                else if (policy.manual_expiration)
+                {
+                    // TODO
+                }
+            }
+            else
+            {
+                // Return an error:
+                var reply = {"result": "NOT_OK", "cause": "wrong_policy"};
+                
+                res.send(reply);
+            }
+        });
     });
 };
 
@@ -75,13 +197,39 @@ exports.status = function(req, res)
                 console.log("[tickets.status] exists returned: %s", exists);
                 console.log("[tickets.status] error was: %s", error);
                 
+                console.log("[tickets.status] policy string is %s", policy_str);
+                
                 if (exists)
                 {
-                    client.ttl(VALID_PREFIX + ticket_base, function(error, ttl)
+                    var policy_str = client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
                     {
-                        var reply = {"status": VALID_TICKET, "expires_in": ttl};
-                        
-                        res.send(reply);
+                        if (policy_str)
+                        {
+                            var policy = JSON.parse(policy_str);
+                            
+                            if (policy.time_based)
+                            {
+                                handleTimeBasedTicketResponse(ticket_base, res);
+                            }
+                            else if (policy.requests_based)
+                            {
+                                handleRequestsBasedTicketResponse(ticket_base, res);
+                            }
+                            else if (policy.manual_expiration)
+                            {
+                                handleManualTicketResponse(ticket_base, res);
+                            }
+                        }
+                        else
+                        {
+                            // Malformed ticket in the DB: delete
+                            client.del(VALID_PREFIX + ticket_base, function(err)
+                            {
+                                var reply = {"status": "ERROR", "cause": "malformed_ticket"};
+                                    
+                                res.send(reply);
+                            });
+                        }
                     });
                 }
                 else
