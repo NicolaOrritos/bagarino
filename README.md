@@ -68,7 +68,7 @@ Asking for a ticket status is all you can do with a newly created ticket. bagari
 The answer will carry some more info when the ticket is still valid:
 
     http://localhost:8124/tickets/0b4e20ce63f7de9a4a77910e7f909e5dba4538f3/status
-    200 OK {"status": __"VALID"__ ,"expires_in":99,"policy":"requests_based"}
+    200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
 In the previous example the expiration policy and the TTL (Time-To-Live) of the ticket are returned, as well as its status.
 The parameter *"expires_in"* has to be read based on the policy of the ticket:
