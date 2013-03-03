@@ -17,7 +17,7 @@ Obtain a new ticket:
     http://localhost:8124/tickets/new
     200 OK {"result":"OK","ticket":"7fd88ab09e40f99767e17df27a723d05562d573b","expires_in":60,"policy":"time_based"}
 
-See the status of the newly ticket created:
+See the status of the newly created ticket:
 
     http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status
     200 OK {"status":"VALID","expires_in":54,"policy":"time_based"}
@@ -33,9 +33,9 @@ Asking for a non-existent ticket results in the following:
 
 By default new tickets have a time-based expire policy and a time-to-live of 60 seconds.
 A different policy can be used by specifying the _"policy"_ parameter in query-string:
- * policy=**time_based** is the default policy. Add "seconds=300" to make the ticket expire after the non-default delay of 5 minutes.
- * policy=**requests_based** makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.
- * policy=__manual_expiration__ makes the ticket perpetual, unless you make it expire manually by calling the _"expire"_ verb (explained some lines below)
+ * **policy=time_based** is the default one. Add "seconds=300" to make the ticket expire after the non-default delay of 5 minutes.
+ * **policy=requests_based** makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.
+ * **policy=manual_expiration** makes the ticket perpetual, unless you make it expire manually by calling the _"expire"_ verb (explained some lines below)
 
 Let's see some requests that create tickets with different expire policies:
 
@@ -58,6 +58,7 @@ The last kind of tickets has a manual expiration policy, so you must call an app
 
 Subsequent requests for that ticket will give an "EXPIRED" status.
 
+
 ### Valid tickets
 Asking for a ticket status is all you can do with a newly created ticket. bagarino will answer with three different statuses:
  * **VALID**
@@ -65,14 +66,14 @@ Asking for a ticket status is all you can do with a newly created ticket. bagari
  * **NOT_VALID**
 
 The answer will carry some more info when the ticket is still valid:
+
     http://localhost:8124/tickets/0b4e20ce63f7de9a4a77910e7f909e5dba4538f3/status
     200 OK {"status":__"VALID"__,"expires_in":99,"policy":"requests_based"}
 
 In the previous example the expiration policy and the TTL (Time-To-Live) of the ticket are returned, as well as its status.
 The parameter *"expires_in"* has to be read based on the policy of the ticket:
- * When the policy is __time_based__ "expires_in" is the number of seconds before the ticket expires
- * When the policy is __requests_based__ "expires_in" is the number of requests before the ticket expires
-
+ * When the policy is **time_based** "expires_in" is the number of seconds before the ticket expires
+ * When the policy is **requests_based** "expires_in" is the number of requests before the ticket expires
 
 
 ### Expired tickets
