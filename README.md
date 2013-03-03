@@ -13,17 +13,21 @@ Here's a detailed guide on how to call bagarino for retrieving new tickets and/o
 
 ### New tickets
 Obtain a new ticket:
+
     http://localhost:8124/tickets/new
     200 OK {"result":"OK","ticket":"7fd88ab09e40f99767e17df27a723d05562d573b","expires_in":60,"policy":"time_based"}
 
 See the status of the newly ticket created:
+
     http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status
     200 OK {"status":"VALID","expires_in":54,"policy":"time_based"}
 
 After a few seconds (60 by default) the ticket expires. Then, asking for it will result in the following response:
+
     200 OK {"status": "EXPIRED"}
 
 Asking for a non-existent ticket results in the following:
+
     http://localhost:8124/tickets/321somenonsense123/status
     200 OK {"status":"NOT_VALID"}
 
@@ -34,6 +38,7 @@ A different policy can be used by specifying the _"policy"_ parameter in query-s
  * policy=__manual_expiration__ makes the ticket perpetual, unless you make it expire manually by calling the _"expire"_ verb (explained some lines below)
 
 Let's see some requests that create tickets with different expire policies:
+
     http://localhost:8124/tickets/new?policy=requests_based&requests=5
     200 OK {"result":"OK","ticket":"62a315cd7bdae5e84567cad9620f82b5defd3ef0","expires_in":5,"policy":"requests_based"}
     
@@ -47,6 +52,7 @@ Let's see some requests that create tickets with different expire policies:
     200 OK {"result":"OK","ticket":"f57d75c23f6a49951a6e886bbc60de74bc02ef33","policy":"manual_expiration"}
 
 The last kind of tickets has a manual expiration policy, so you must call an appropriate verb to make it expire:
+
     http://localhost:8124/tickets/f57d75c23f6a49951a6e886bbc60de74bc02ef33/expire
     200 OK {"status":"EXPIRED"}
 
