@@ -37,7 +37,7 @@ A different policy can be used by specifying the _"policy"_ parameter in query-s
  * **policy=requests_based** makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.
  * **policy=manual_expiration** makes the ticket perpetual, unless you make it expire manually by calling the _"expire"_ verb (explained some lines below)
 
-Let's see some requests that create tickets with different expire policies:
+Let's see some requests that create tickets with different expiration policies:
 
     http://localhost:8124/tickets/new?policy=requests_based&requests=5
     200 OK {"result":"OK","ticket":"62a315cd7bdae5e84567cad9620f82b5defd3ef0","expires_in":5,"policy":"requests_based"}
@@ -68,12 +68,12 @@ Asking for a ticket status is all you can do with a newly created ticket. bagari
 The answer will carry some more info when the ticket is still valid:
 
     http://localhost:8124/tickets/0b4e20ce63f7de9a4a77910e7f909e5dba4538f3/status
-    200 OK {"status":__"VALID"__,"expires_in":99,"policy":"requests_based"}
+    200 OK {"status": __"VALID"__,"expires_in":99,"policy":"requests_based"}
 
 In the previous example the expiration policy and the TTL (Time-To-Live) of the ticket are returned, as well as its status.
 The parameter *"expires_in"* has to be read based on the policy of the ticket:
- * When the policy is **time_based** "expires_in" is the number of seconds before the ticket expires
- * When the policy is **requests_based** "expires_in" is the number of requests before the ticket expires
+ * When the policy is **time_based** then _"expires_in"_ is the number of seconds before the ticket expires
+ * When the policy is **requests_based** the value of _"expires_in"_ is the number of requests before the ticket expires
 
 
 ### Expired tickets
