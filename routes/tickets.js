@@ -24,6 +24,8 @@ var DEFAULT_EXPIRES_IN_REQUESTS = 100;
 
 var DEFAULT_REMEMBER_UNTIL = 60 * 60 * 24 * 10;  // Ten days
 
+var MAX_TICKETS_PER_TIME = 2000;
+
 
 function calculateExpirationPolicy(query_string, save_ticket)
 {
@@ -195,56 +197,125 @@ exports.new = function(req, res)
         {
             if (policy)
             {
-                var ticket_base = createNewTicket();
-                var valid_ticket   = VALID_PREFIX   + ticket_base;
-                var expired_ticket = EXPIRED_PREFIX + ticket_base;
-                
-                
-                if (policy.time_based)
+                var count = 1;
+            
+                if (req.query.count)
                 {
-                    // Early reply:
-                    var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in, "policy": "time_based"};
-                    res.send(reply);
-                    
-                    // First save the "real" ticket:
-                    client.hset(valid_ticket, "content", VALID_TICKET);
-                    client.hset(valid_ticket, "policy", JSON.stringify(policy));
-                    client.expire(valid_ticket, policy.expires_in);
-                    
-                    // Then save the "to-be-expired" counterpart:
-                    client.set(expired_ticket, EXPIRED_TICKET);
-                    client.expire(expired_ticket, policy.remember_until);
+                    count = req.query.count;
                 }
-                else if (policy.requests_based)
+                
+                if (count > MAX_TICKETS_PER_TIME)
                 {
-                    // Early reply:
-                    var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in, "policy": "requests_based"};
+                    var reply = {
+                        "result": "NOT_OK",
+                        "cause": "too_much_tickets",
+                        "message": "Try lowering your 'count' request to <" + MAX_TICKETS_PER_TIME
+                    };
+                    
                     res.send(reply);
-                    
-                    // First save the "real" ticket:
-                    client.hset(valid_ticket, "content", VALID_TICKET);
-                    client.hset(valid_ticket, "policy", JSON.stringify(policy));
-                    
-                    // Then save the "to-be-expired" counterpart:
-                    client.set(expired_ticket, EXPIRED_TICKET);
-                    client.expire(expired_ticket, policy.remember_until);
-                }
-                else if (policy.manual_expiration)
-                {
-                    // Early reply:
-                    var reply = {"result": "OK", "ticket": ticket_base, "policy": "manual_expiration"};
-                    res.send(reply);
-                    
-                    // First save the "real" ticket:
-                    client.hset(valid_ticket, "content", VALID_TICKET);
-                    client.hset(valid_ticket, "policy", JSON.stringify(policy));
                 }
                 else
                 {
-                    // Return an error:
-                    var reply = {"result": "NOT_OK", "cause": "wrong_policy"};
+                    var tickets = new Array();
                     
-                    res.send(reply);
+                    var reply = {"result": "OK",
+                        "tickets": undefined,
+                        "expire_in": policy.expires_in,
+                        "policy": undefined
+                    };
+                    
+                    for (var a=0; a<count; a++)
+                    {
+                        var ticket_base = createNewTicket();
+                        var valid_ticket   = VALID_PREFIX   + ticket_base;
+                        var expired_ticket = EXPIRED_PREFIX + ticket_base;
+                        
+                        if (policy.time_based)
+                        {
+                            if (count == 1)
+                            {
+                                // Early reply:
+                                var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in, "policy": "time_based"};
+                                res.send(reply);
+                            }
+                            else
+                            {
+                                tickets[a] = ticket_base;
+                            }
+                            
+                            // First save the "real" ticket:
+                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
+                            client.expire(valid_ticket, policy.expires_in);
+                            
+                            // Then save the "to-be-expired" counterpart:
+                            client.set(expired_ticket, EXPIRED_TICKET);
+                            client.expire(expired_ticket, policy.remember_until);
+                        }
+                        else if (policy.requests_based)
+                        {
+                            if (count == 1)
+                            {
+                                // Early reply:
+                                var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in, "policy": "requests_based"};
+                                res.send(reply);
+                            }
+                            else
+                            {
+                                tickets[a] = ticket_base;
+                            }
+                            
+                            // First save the "real" ticket:
+                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
+                            
+                            // Then save the "to-be-expired" counterpart:
+                            client.set(expired_ticket, EXPIRED_TICKET);
+                            client.expire(expired_ticket, policy.remember_until);
+                        }
+                        else if (policy.manual_expiration)
+                        {
+                            if (count == 1)
+                            {
+                                // Early reply:
+                                var reply = {"result": "OK", "ticket": ticket_base, "policy": "manual_expiration"};
+                                res.send(reply);
+                            }
+                            else
+                            {
+                                tickets[a] = ticket_base;
+                            }
+                            
+                            // First save the "real" ticket:
+                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
+                        }
+                        else
+                        {
+                            // Return an error:
+                            var reply = {"result": "NOT_OK", "cause": "wrong_policy"};
+                            
+                            if (count == 1)
+                            {
+                                res.send(reply);
+                            }
+                            else
+                            {
+                                // Exit from the external "for":
+                                break;
+                            }
+                        }
+                    }
+                    
+                    if (count > 1)
+                    {
+                        if (reply.status != "NOT_OK")
+                        {
+                            reply.tickets = tickets;
+                        }
+                        
+                        res.send(reply);
+                    }
                 }
             }
             else
