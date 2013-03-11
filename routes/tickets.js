@@ -24,7 +24,7 @@ var DEFAULT_EXPIRES_IN_REQUESTS = 100;
 
 var DEFAULT_REMEMBER_UNTIL = 60 * 60 * 24 * 10;  // Ten days
 
-var MAX_TICKETS_PER_TIME = 2000;
+var MAX_TICKETS_PER_TIME = 200;
 
 
 function calculateExpirationPolicy(query_string, save_ticket)
@@ -240,6 +240,7 @@ exports.new = function(req, res)
                             }
                             else
                             {
+                                reply.policy = "time_based";
                                 tickets[a] = ticket_base;
                             }
                             
@@ -262,6 +263,7 @@ exports.new = function(req, res)
                             }
                             else
                             {
+                                reply.policy = "requests_based";
                                 tickets[a] = ticket_base;
                             }
                             
@@ -283,6 +285,7 @@ exports.new = function(req, res)
                             }
                             else
                             {
+                                reply.policy = "manual_expiration";
                                 tickets[a] = ticket_base;
                             }
                             
