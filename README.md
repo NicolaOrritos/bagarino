@@ -80,6 +80,15 @@ The parameter *"expires_in"* has to be read based on the policy of the ticket:
 Expired tickets are kept in memory by bagarino for 10 days. After that time a call to their status will return "NOT_VALID" as it would for a ticket that didn't exist in the first place.
 
 
+### Mass-creation of tickets
+It's possible to create more tickets at once by adding the paramenter "count" to the query-string of the verb _new_, followed by the number of tickets to be created.
+The maximum number of tickets that can be created this way is capped to prevent overloading the system.
+Here's a typical request for mass-creation of tickets:
+
+    http://localhost:8124/tickets/new?count=4
+    200 OK {"result":"OK","tickets":["9c7800ec9cf053e60674042533710c556fe22949","3cd5da62c2ba6d2b6b8973016264282f61f4afdd","7207c7effb2bd8fd97b885a4f72492a97e79babf","75a6cf2ba0454dfe74a4d6ce8baa80881fb76005"],"expire_in":60,"policy":"time_based"}
+
+
 
 LICENSE - Apache License v2
 ---------------------------
