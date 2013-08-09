@@ -3,8 +3,12 @@
  * Module dependencies.
  */
 
+var fs      = require("fs");
 var cluster = require("cluster");
 var express = require("express");
+
+var Log     = require("log");
+
 
 
 // Code to run if we're in the master process
@@ -28,6 +32,8 @@ else
                  };
 
     var app = express();
+    
+    var log = new Log("debug", fs.createWriteStream("bagarino_w" + cluster.worker.id + ".log"));
 
 
     // Configuration
@@ -65,10 +71,10 @@ else
 
     app.listen(PORT);
 
-    console.log("BAGARINO-Express server listening on port %d in %s mode [worker is %s]",
-                PORT,
-                app.settings.env,
-                cluster.worker.id);
+    log.info("BAGARINO-Express server listening on port %d in %s mode [worker is %s]",
+             PORT,
+             app.settings.env,
+             cluster.worker.id);
 }
 
 // Listen for dying workers
@@ -76,6 +82,6 @@ cluster.on('exit', function (worker)
 {
     // Replace the dead worker,
     // we're not sentimental
-    console.log('Worker ' + worker.id + ' died :(');
+    log.info('Worker ' + worker.id + ' died :(');
     cluster.fork();
 });

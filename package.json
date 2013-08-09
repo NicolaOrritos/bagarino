@@ -7,5 +7,6 @@
     , "redis": ""
     , "node_hash": ""
     , "hiredis": ""
+    , "log": ""
   }
 }
