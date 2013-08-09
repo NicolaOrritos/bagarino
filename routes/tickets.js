@@ -37,6 +37,8 @@ function calculateExpirationPolicy(query_string, save_ticket)
             requests_based: false,
             manual_expiration: false,
             
+            context: undefined,
+            
             expires_in: undefined,
             remember_until: DEFAULT_REMEMBER_UNTIL
         };
@@ -91,6 +93,13 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
             }
         }
+        
+        // The policy may contain a "context":
+        if (query_string.context)
+        {
+            policy.context = query_string.context;
+        }
+        
         
         save_ticket.call(this, policy);
     }
@@ -289,7 +298,7 @@ exports.new = function(req, res)
                                 tickets[a] = ticket_base;
                             }
                             
-                            // First save the "real" ticket:
+                            // Just save the ticket:
                             client.hset(valid_ticket, "content", VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
                         }
@@ -345,27 +354,45 @@ exports.status = function(req, res)
                 console.log("[tickets.status] exists returned: %s", exists);
                 console.log("[tickets.status] error was: %s", error);
                 
-                console.log("[tickets.status] policy string is %s", policy_str);
-                
                 if (exists)
                 {
                     var policy_str = client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
                     {
                         if (policy_str)
                         {
+                            console.log("[tickets.status] policy string is %s", policy_str);
+                            
                             var policy = JSON.parse(policy_str);
                             
-                            if (policy.time_based)
+                            var can_go_on = true;
+                            
+                            // If the tickets was created with a context check it:
+                            if (policy.context)
+                            if (req.query.context != policy.context)
                             {
-                                handleTimeBasedTicketResponse(ticket_base, res);
+                                can_go_on = false;
                             }
-                            else if (policy.requests_based)
+                            
+                            if (can_go_on)
                             {
-                                handleRequestsBasedTicketResponse(ticket_base, res);
+                                if (policy.time_based)
+                                {
+                                    handleTimeBasedTicketResponse(ticket_base, res);
+                                }
+                                else if (policy.requests_based)
+                                {
+                                    handleRequestsBasedTicketResponse(ticket_base, res);
+                                }
+                                else if (policy.manual_expiration)
+                                {
+                                    handleManualTicketResponse(ticket_base, res);
+                                }
                             }
-                            else if (policy.manual_expiration)
+                            else
                             {
-                                handleManualTicketResponse(ticket_base, res);
+                                var reply = {"status": "ERROR", "cause": "not_found"};
+                                
+                                res.send(reply);
                             }
                         }
                         else
