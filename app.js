@@ -32,8 +32,6 @@ else
                  };
 
     var app = express();
-    
-    var log = new Log("debug", fs.createWriteStream("bagarino_w" + cluster.worker.id + ".log"));
 
 
     // Configuration
@@ -55,11 +53,19 @@ else
     app.configure('development', function()
     {
         app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
+        
+        fs.mkdir("logs");
+        
+        global.log = new Log("debug", fs.createWriteStream("logs/worker_" + cluster.worker.id + ".log"));
     });
 
     app.configure('production', function()
     {
         app.use(express.errorHandler());
+        
+        fs.mkdir("logs");
+        
+        global.log = new Log("info", fs.createWriteStream("logs/worker_" + cluster.worker.id + ".log"));
     });
 
 
@@ -71,10 +77,10 @@ else
 
     app.listen(PORT);
 
-    log.info("BAGARINO-Express server listening on port %d in %s mode [worker is %s]",
-             PORT,
-             app.settings.env,
-             cluster.worker.id);
+    global.log.info("BAGARINO-Express server listening on port %d in %s mode [worker is %s]",
+                    PORT,
+                    app.settings.env,
+                    cluster.worker.id);
 }
 
 // Listen for dying workers
@@ -82,6 +88,6 @@ cluster.on('exit', function (worker)
 {
     // Replace the dead worker,
     // we're not sentimental
-    log.info('Worker ' + worker.id + ' died :(');
+    global.log.info('Worker ' + worker.id + ' died :(');
     cluster.fork();
 });

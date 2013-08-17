@@ -6,7 +6,7 @@ var client = redis.createClient();
 
 client.on("error", function (err)
 {
-    console.log("Got an error from the Redis client: " + err);
+    global.log.error("Got an error from the Redis client: " + err);
 });
 
 var REDIS_DB = 3;
@@ -114,11 +114,11 @@ function createNewTicket()
 {
     var now = new Date().getTime().toString();
         
-    console.log("Generating ticket from current date and time (since epoch): %s", now);
+    global.log.debug("Generating ticket from current date and time (since epoch): %s", now);
     
     now += Math.random();
     
-    console.log("After adding random salt: %s", now);
+    global.log.debug("After adding random salt: %s", now);
     
     var ticket = hash.sha1(now);
     
@@ -351,8 +351,8 @@ exports.status = function(req, res)
         {
             client.exists(VALID_PREFIX + ticket_base, function(error, exists)
             {
-                console.log("[tickets.status] exists returned: %s", exists);
-                console.log("[tickets.status] error was: %s", error);
+                global.log.debug("[tickets.status] exists returned: %s", exists);
+                global.log.debug("[tickets.status] error was: %s", error);
                 
                 if (exists)
                 {
@@ -360,7 +360,7 @@ exports.status = function(req, res)
                     {
                         if (policy_str)
                         {
-                            console.log("[tickets.status] policy string is %s", policy_str);
+                            global.log.debug("[tickets.status] policy string is %s", policy_str);
                             
                             var policy = JSON.parse(policy_str);
                             
@@ -412,8 +412,8 @@ exports.status = function(req, res)
                     // Check whether it expired:
                     client.exists(EXPIRED_PREFIX + ticket_base, function(error, expired)
                     {
-                        console.log("[tickets.status] expired returned: %s", expired);
-                        console.log("[tickets.status] error was: %s", error);
+                        global.log.debug("[tickets.status] expired returned: %s", expired);
+                        global.log.debug("[tickets.status] error was: %s", error);
                         
                         if (expired)
                         {
@@ -496,8 +496,8 @@ exports.expire = function(req, res)
                     // Check whether it expired:
                     client.exists(EXPIRED_PREFIX + ticket_base, function(error, expired)
                     {
-                        console.log("[tickets.expire] expired returned: %s", expired);
-                        console.log("[tickets.expire] error was: %s", error);
+                        global.log.debug("[tickets.expire] expired returned: %s", expired);
+                        global.log.debug("[tickets.expire] error was: %s", error);
                         
                         if (expired)
                         {
@@ -523,5 +523,4 @@ exports.expire = function(req, res)
         }
     });
 };
-
 
