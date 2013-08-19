@@ -29,7 +29,7 @@ After a few seconds (60 by default) the ticket expires. Then, asking for it will
 Asking for a non-existent ticket results in the following:
 
     http://localhost:8124/tickets/321somenonsense123/status
-    200 OK {"status":"NOT_VALID"}
+    400 Bad Request {"status":"NOT_VALID"}
 
 By default new tickets have a time-based expire policy and a time-to-live of 60 seconds.
 A different policy can be used by specifying the _"policy"_ parameter in query-string:
@@ -87,6 +87,24 @@ Here's a typical request for mass-creation of tickets:
 
     http://localhost:8124/tickets/new?count=4
     200 OK {"result":"OK","tickets":["9c7800ec9cf053e60674042533710c556fe22949","3cd5da62c2ba6d2b6b8973016264282f61f4afdd","7207c7effb2bd8fd97b885a4f72492a97e79babf","75a6cf2ba0454dfe74a4d6ce8baa80881fb76005"],"expire_in":60,"policy":"time_based"}
+
+
+### Tickets contexts
+Sometimes it may be useful to bound one or more tickets to a "context" so they only acquire a meaning under certain conditions.
+In bagarino this is done by attaching a textual context to the ticket during the "new" operation:
+
+    http://localhost:8124/tickets/new?policy=requests_based&context=mysweetlittlecontext
+    200 OK {"result":"OK","ticket":"7486f1dcf4fc4d3c4ef257230060aea531d42758","expires_in":100,"policy":"requests_based"}
+
+Once it's scoped this way requests for that ticket status that don't specify the context won't be able to retrieve it, resulting in a "not_found" error, the same given when asking for a non-existent ticket:
+
+    http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status
+    404 Not Found {"status":"ERROR","cause":"not_found"}
+
+The way to ask for a context-bound token is as follows:
+
+    http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status?context=mysweetlittlecontext
+    200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
 
 
