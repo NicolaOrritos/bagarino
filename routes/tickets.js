@@ -173,7 +173,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 {
                     var reply = {"status": "ERROR", "cause": "different_policy"};
                                     
-                    res.send(reply);
+                    res.status(400).send(reply);
                 }
             }
             else
@@ -183,7 +183,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 {
                     var reply = {"status": "ERROR", "cause": "malformed_ticket"};
                         
-                    res.send(reply);
+                    res.status(500).send(reply);
                 });
             }
         });
@@ -221,7 +221,7 @@ exports.new = function(req, res)
                         "message": "Try lowering your 'count' request to <" + MAX_TICKETS_PER_TIME
                     };
                     
-                    res.send(reply);
+                    res.status(400).send(reply);
                 }
                 else
                 {
@@ -309,7 +309,7 @@ exports.new = function(req, res)
                             
                             if (count == 1)
                             {
-                                res.send(reply);
+                                res.status(400).send(reply);
                             }
                             else
                             {
@@ -335,7 +335,7 @@ exports.new = function(req, res)
                 // Return an error:
                 var reply = {"result": "NOT_OK", "cause": "wrong_policy"};
                 
-                res.send(reply);
+                res.status(400).send(reply);
             }
         });
     });
@@ -392,7 +392,7 @@ exports.status = function(req, res)
                             {
                                 var reply = {"status": "ERROR", "cause": "not_found"};
                                 
-                                res.send(reply);
+                                res.status(404).send(reply);
                             }
                         }
                         else
@@ -402,7 +402,7 @@ exports.status = function(req, res)
                             {
                                 var reply = {"status": "ERROR", "cause": "malformed_ticket"};
                                     
-                                res.send(reply);
+                                res.status(500).send(reply);
                             });
                         }
                     });
@@ -425,7 +425,7 @@ exports.status = function(req, res)
                         {
                             var reply = {"status": NOT_VALID_TICKET};
                             
-                            res.send(reply);
+                            res.status(400).send(reply);
                         }
                     });
                 }
@@ -435,7 +435,7 @@ exports.status = function(req, res)
         {
             var reply = {"status": "ERROR", "cause": "empty_request"};
             
-            res.send(reply);
+            res.status(400).send(reply);
         }
         
     });
@@ -476,7 +476,7 @@ exports.expire = function(req, res)
                             {
                                 var reply = {"status": "ERROR", "cause": "different_policy"};
                                     
-                                res.send(reply);
+                                res.status(400).send(reply);
                             }
                         }
                         else
@@ -486,7 +486,7 @@ exports.expire = function(req, res)
                             {
                                 var reply = {"status": "ERROR", "cause": "malformed_ticket"};
                                     
-                                res.send(reply);
+                                res.status(500).send(reply);
                             });
                         }
                     });
@@ -503,13 +503,13 @@ exports.expire = function(req, res)
                         {
                             var reply = {"status": "ERROR", "cause": "ticket_already_expired"};
                             
-                            res.send(reply);
+                            res.status(400).send(reply);
                         }
                         else
                         {
                             var reply = {"status": "ERROR", "cause": "not_found"};
                             
-                            res.send(reply);
+                            res.status(404).send(reply);
                         }
                     });
                 }
@@ -519,7 +519,7 @@ exports.expire = function(req, res)
         {
             var reply = {"status": "ERROR", "cause": "empty_request"};
             
-            res.send(reply);
+            res.status(400).send(reply);
         }
     });
 };
