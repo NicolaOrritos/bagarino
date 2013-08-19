@@ -70,8 +70,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
         {
             policy.manual_expiration = true;
         }
-        // Default to time_based policy
-        else  // if (query_string.policy == "time_based")
+        else if (query_string.policy == "time_based")
         {
             policy.time_based = true;
             
@@ -93,8 +92,13 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
             }
         }
+        else
+        {
+            policy = undefined;
+        }
         
         // The policy may contain a "context":
+        if (policy)
         if (query_string.context)
         {
             policy.context = query_string.context;
