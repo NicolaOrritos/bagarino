@@ -427,9 +427,9 @@ exports.status = function(req, res)
                         }
                         else
                         {
-                            var reply = {"status": NOT_VALID_TICKET};
+                            var reply = {"status": "ERROR", "cause": "not_found"};
                             
-                            res.status(400).send(reply);
+                            res.status(404).send(reply);
                         }
                     });
                 }

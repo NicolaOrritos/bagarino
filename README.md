@@ -29,7 +29,7 @@ After a few seconds (60 by default) the ticket expires. Then, asking for it will
 Asking for a non-existent ticket results in the following:
 
     http://localhost:8124/tickets/321somenonsense123/status
-    400 Bad Request {"status":"NOT_VALID"}
+    404 Not Found {"status":"ERROR","cause":"not_found"}
 
 By default new tickets have a time-based expire policy and a time-to-live of 60 seconds.
 A different policy can be used by specifying the _"policy"_ parameter in query-string:
