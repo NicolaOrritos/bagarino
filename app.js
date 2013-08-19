@@ -47,12 +47,12 @@ else
         app.use(express.methodOverride());
         app.use(app.router);
         app.use(express.static(__dirname + '/public'));
-
     });
 
     app.configure('development', function()
     {
         app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
+        app.locals.pretty = true;
         
         fs.mkdir("logs");
         
