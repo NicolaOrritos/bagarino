@@ -54,9 +54,8 @@ else
         app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
         app.locals.pretty = true;
         
-        fs.mkdir("logs");
-        
-        global.log = new Log("debug", fs.createWriteStream("logs/worker_" + cluster.worker.id + ".log"));
+        // Let logs go to stdout
+        global.log = new Log("debug");
     });
 
     app.configure('production', function()
