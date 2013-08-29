@@ -33,15 +33,29 @@ function calculateExpirationPolicy(query_string, save_ticket)
     if (query_string)
     {
         var policy = {
+            // Policies available for tickets:
             time_based: false,
             requests_based: false,
             manual_expiration: false,
+            cascading: false,
             
+            // When the ticket has a cascading policy this one tracks the ticket this one depends on:
+            depends_on: undefined,
+            
+            // Track an optional context for this ticket
             context: undefined,
             
+            // Number of seconds/requests until this ticket expires
             expires_in: undefined,
             remember_until: DEFAULT_REMEMBER_UNTIL
         };
+        
+        
+        // The policy may contain a "context":
+        if (query_string.context)
+        {
+            policy.context = query_string.context;
+        }
         
         
         if (query_string.policy == "requests_based")
@@ -65,10 +79,16 @@ function calculateExpirationPolicy(query_string, save_ticket)
             {
                 policy.expires_in = DEFAULT_EXPIRES_IN_REQUESTS;
             }
+            
+            
+            save_ticket.call(this, policy);
         }
         else if (query_string.policy == "manual_expiration")
         {
             policy.manual_expiration = true;
+            
+            
+            save_ticket.call(this, policy);
         }
         else if (query_string.policy == "time_based")
         {
@@ -91,26 +111,56 @@ function calculateExpirationPolicy(query_string, save_ticket)
             {
                 policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
             }
+            
+            
+            save_ticket.call(this, policy);
+        }
+        else if (query_string.policy == "cascading")
+        {
+            policy.cascading = true;
+            
+            var dep_ticket = query_string.depends_on;
+            
+            global.log.debug("Creating cascading-policy ticket dependent on ticket '%s'", dep_ticket);
+            
+            if (dep_ticket)
+            {
+                client.select(REDIS_DB, function()
+                {
+                    client.exists(VALID_PREFIX + dep_ticket, function(error, exists)
+                    {
+                        if(exists)
+                        {
+                            global.log.debug("Dependency ticket '%s' exists", dep_ticket);
+                            
+                            policy.depends_on = dep_ticket;
+                            
+                            global.log.debug("Resulting policy for cascading ticket is: " + JSON.stringify(policy));
+                        }
+                        else
+                        {
+                            global.log.debug("Dependency ticket '%s' DOES NOT exists", dep_ticket);
+                            
+                            policy = undefined;
+                        }
+                        
+                        
+                        save_ticket.call(this, policy);
+                    });
+                });
+            }
         }
         else
         {
             policy = undefined;
+            
+            save_ticket.call(this, policy);
         }
-        
-        // The policy may contain a "context":
-        if (policy)
-        if (query_string.context)
-        {
-            policy.context = query_string.context;
-        }
-        
-        
-        save_ticket.call(this, policy);
     }
     else
     {
         // Call the save_ticket function passing undefined:
-        save_ticket.call(this);
+        save_ticket.call(this, undefined);
     }
 }
 
@@ -157,7 +207,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                     if (policy.expires_in == 0)
                     {
                         var reply = {"status": EXPIRED_TICKET};
-            
+                        
                         res.send(reply);
                         
                         client.del(VALID_PREFIX + ticket_base);
@@ -199,6 +249,54 @@ function handleManualTicketResponse(ticket_base, res)
     var reply = {"status": VALID_TICKET, "policy": "manual_expiration"};
         
     res.send(reply);
+}
+
+function handleCascadingTicketResponse(ticket_base, res)
+{
+    client.select(REDIS_DB, function()
+    {
+        client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
+        {
+            if (policy_str)
+            {
+                var policy = JSON.parse(policy_str);
+                
+                if (policy.cascading)
+                {
+                    var dep_ticket = policy.depends_on;
+                    
+                    if (dep_ticket)
+                    {
+                        client.exists(VALID_PREFIX + dep_ticket, function(error, exists)
+                        {
+                            if (exists)
+                            {
+                                var reply = {"status": VALID_TICKET, "policy": "cascading", "depends_on": dep_ticket};
+                                
+                                res.send(reply);
+                            }
+                            else
+                            {
+                                client.exists(EXPIRED_PREFIX + dep_ticket, function(error, expired)
+                                {
+                                    /* The ticket this one depends on has expired
+                                     * since the last time we checked.
+                                     * We must mark this one as expired too. */
+                                    
+                                    // Early reply
+                                    var reply = {"status": EXPIRED_TICKET};
+                                    
+                                    res.send(reply);
+                                    
+                                    client.del(VALID_PREFIX + ticket_base);
+                                });
+                            }
+                        });
+                    }
+                }
+            }
+        });
+    });
 }
 
 
@@ -306,6 +404,28 @@ exports.new = function(req, res)
                             client.hset(valid_ticket, "content", VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
                         }
+                        else if (policy.cascading)
+                        {
+                            if (count == 1)
+                            {
+                                // Early reply:
+                                var reply = {"result": "OK", "ticket": ticket_base, "depends_on": policy.depends_on, "policy": "cascading"};
+                                res.send(reply);
+                            }
+                            else
+                            {
+                                reply.policy = "cascading";
+                                tickets[a] = ticket_base;
+                            }
+                            
+                            // First save the "real" ticket:
+                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
+                            
+                            // Then save the "to-be-expired" counterpart:
+                            client.set(expired_ticket, EXPIRED_TICKET);
+                            client.expire(expired_ticket, policy.remember_until);
+                        }
                         else
                         {
                             // Return an error:
@@ -353,6 +473,8 @@ exports.status = function(req, res)
         
         if (ticket_base)
         {
+            global.log.debug("[tickets.status] asking status of ticket '%s'...'", ticket_base);
+            
             client.exists(VALID_PREFIX + ticket_base, function(error, exists)
             {
                 global.log.debug("[tickets.status] exists returned: %s", exists);
@@ -390,6 +512,10 @@ exports.status = function(req, res)
                                 else if (policy.manual_expiration)
                                 {
                                     handleManualTicketResponse(ticket_base, res);
+                                }
+                                else if (policy.cascading)
+                                {
+                                    handleCascadingTicketResponse(ticket_base, res);
                                 }
                             }
                             else
