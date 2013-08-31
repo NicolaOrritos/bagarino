@@ -35,6 +35,7 @@ By default new tickets have a time-based expire policy and a time-to-live of 60 
 A different policy can be used by specifying the _"policy"_ parameter in query-string:
  * **policy=time_based** is the default one. Add "seconds=300" to make the ticket expire after the non-default delay of 5 minutes.
  * **policy=requests_based** makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.
+  * **policy=cascading** makes the ticket _depend_ on another one: once the _dependency_ ticket expires the _dependent_ one does as well.
  * **policy=manual_expiration** makes the ticket perpetual, unless you make it expire manually by calling the _"expire"_ verb (explained some lines below)
 
 Let's see some requests that create tickets with different expiration policies:
@@ -47,6 +48,9 @@ Let's see some requests that create tickets with different expiration policies:
     
     http://localhost:8124/tickets/new?policy=time_based&seconds=120
     200 OK {"result":"OK","ticket":"50ab14d6f5dd082e8ed343f7adb5f916fa76188a","expires_in":120,"policy":"time_based"}
+    
+    http://localhost:8124/tickets/new?policy=cascading&depends_on=f073145dfdf45a6e85d0f758f78fd627fa301983
+    200 OK {"result":"OK","ticket":"9ae23360fb4e9b3348917eb5e9b8a8e725b0dcb0","depends_on":"f073145dfdf45a6e85d0f758f78fd627fa301983","policy":"cascading"}
     
     http://localhost:8124/tickets/new?policy=manual_expiration
     200 OK {"result":"OK","ticket":"f57d75c23f6a49951a6e886bbc60de74bc02ef33","policy":"manual_expiration"}
@@ -105,6 +109,7 @@ The way to ask for a context-bound token is as follows:
 
     http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status?context=mysweetlittlecontext
     200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
+
 
 
 
