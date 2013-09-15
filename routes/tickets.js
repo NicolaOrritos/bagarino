@@ -149,6 +149,12 @@ function calculateExpirationPolicy(query_string, save_ticket)
                     });
                 });
             }
+            else
+            {
+                policy = undefined;
+                
+                save_ticket.call(this, policy);
+            }
         }
         else
         {
