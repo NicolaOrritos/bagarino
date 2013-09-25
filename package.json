@@ -1,7 +1,7 @@
 {
     "name": "bagarino"
   , "version": "0.2.0"
-  , "private": true
+  , "private": false
   , "dependencies": {
       "express": ""
     , "redis": ""
