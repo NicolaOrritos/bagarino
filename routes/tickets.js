@@ -1,4 +1,6 @@
 
+// [todo] - Add a clarification about bandwidth-based tickets: they never expire, they simply can be spent a fixed amount of times within a minute
+
 var hash = require('node_hash');
 var redis = require("redis");
 
@@ -21,12 +23,14 @@ var EXPIRED_PREFIX = "EXPIRED:";
 
 var DEFAULT_EXPIRES_IN_SECONDS  = 60;
 var DEFAULT_EXPIRES_IN_REQUESTS = 100;
+var DEFAULT_REQUESTS_PER_MINUTE = 60;
 
 var DEFAULT_REMEMBER_UNTIL = 60 * 60 * 24 * 10;  // Ten days
 
 var MAX_TICKETS_PER_TIME = 200;
 
 
+// [todo] - Add bandwidth-based policy
 function calculateExpirationPolicy(query_string, save_ticket)
 {
     if (save_ticket)
@@ -38,6 +42,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             requests_based: false,
             manual_expiration: false,
             cascading: false,
+            bandwidth_based: false,
             
             // When the ticket has a cascading policy this one tracks the ticket this one depends on:
             depends_on: undefined,
@@ -155,6 +160,31 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 
                 save_ticket.call(this, policy);
             }
+        }
+        else if (query_string.policy == "bandwidth_based")
+        {
+            policy.bandwidth_based = true;
+            
+            if (query_string.reqs_per_minute)
+            {
+                var reqs = parseInt(query_string.reqs_per_minute);
+                
+                if (reqs != NaN)
+                {
+                    policy.expires_in = reqs;
+                }
+                else
+                {
+                    policy.expires_in = DEFAULT_REQUESTS_PER_MINUTE;
+                }
+            }
+            else
+            {
+                policy.expires_in = DEFAULT_REQUESTS_PER_MINUTE;
+            }
+            
+            
+            save_ticket.call(this, policy);
         }
         else
         {
@@ -305,6 +335,99 @@ function handleCascadingTicketResponse(ticket_base, res)
     });
 }
 
+function handleBandwidthTicketResponse(ticket_base, res)
+{
+    client.select(REDIS_DB, function()
+    {
+        client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
+        {
+            if (policy_str)
+            {
+                var policy = JSON.parse(policy_str);
+                
+                if (policy.bandwidth_based)
+                {
+                    var last_check = policy.last_check;
+                    
+                    console.log("last_check: %s", last_check);
+                    
+                    var count = policy.checks_count;
+                    
+                    var now = (new Date()).getTime();
+                    
+                    console.log("now: %s", now);
+                    
+                    var timeDiff = now - last_check;
+                    
+                    console.log("diff (in seconds): %s", timeDiff / 1000);
+                    
+                    if ( last_check
+                         && timeDiff < 60 * 1000 )
+                    {
+                        if (count >= policy.expires_in)
+                        {
+                            // Expired ticket
+                            var reply = {"status": EXPIRED_TICKET};
+                            
+                            res.send(reply);
+                        }
+                        else
+                        {
+                            var reply = {
+                                "status": VALID_TICKET,
+                                "expires_in": policy.expires_in - count,
+                                "policy": "bandwidth_based"
+                            };
+                            
+                            res.send(reply);
+                        }
+                        
+                        count++;
+                    }
+                    else
+                    {
+                        /* First time this ticket has been checked
+                         * or a minute from the last check has already passed */
+                        
+                        count = 1;
+                        
+                        var reply = {
+                            "status": VALID_TICKET,
+                            "expires_in": policy.expires_in - count,
+                            "policy": "bandwidth_based"
+                        };
+                        
+                        res.send(reply);
+                        
+                        policy.last_check = now;
+                    }
+                    
+                    
+                    policy.checks_count = count;
+                    
+                    client.hset(VALID_PREFIX + ticket_base, "policy", JSON.stringify(policy));
+                }
+                else
+                {
+                    var reply = {"status": "ERROR", "cause": "different_policy"};
+                                    
+                    res.status(400).send(reply);
+                }
+            }
+            else
+            {
+                // Malformed ticket in the DB: delete
+                client.del(VALID_PREFIX + ticket_base, function(err)
+                {
+                    var reply = {"status": "ERROR", "cause": "malformed_ticket"};
+                        
+                    res.status(500).send(reply);
+                });
+            }
+        });
+    });
+}
+
 
 exports.new = function(req, res)
 {
@@ -432,6 +555,26 @@ exports.new = function(req, res)
                             client.set(expired_ticket, EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
                         }
+                        else if (policy.bandwidth_based)
+                        {
+                            if (count == 1)
+                            {
+                                // Early reply:
+                                var reply = {"result": "OK", "ticket": ticket_base, "policy": "bandwidth_based", "requests_per_minute": policy.expires_in};
+                                res.send(reply);
+                            }
+                            else
+                            {
+                                reply.policy = "bandwidth_based";
+                                tickets[a] = ticket_base;
+                            }
+                            
+                            // Save the ticket WITHOUT the last-check time:
+                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
+                            
+                            // No "to-be-expired" counterpart: bandwidth-based tickets never expire
+                        }
                         else
                         {
                             // Return an error:
@@ -522,6 +665,10 @@ exports.status = function(req, res)
                                 else if (policy.cascading)
                                 {
                                     handleCascadingTicketResponse(ticket_base, res);
+                                }
+                                else if (policy.bandwidth_based)
+                                {
+                                    handleBandwidthTicketResponse(ticket_base, res);
                                 }
                             }
                             else
