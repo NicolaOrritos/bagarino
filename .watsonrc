@@ -1,0 +1,34 @@
+# watson rc
+# watson - inline issue manager
+# [goosecode] labs
+
+
+# Directories
+[dirs]
+./
+
+
+# Tags
+[tags]
+fix
+review
+todo
+
+
+# Ignores
+[ignore]
+.git
+*.swp
+*.json
+node_modules
+logs
+
+
+[github_api]
+2b73a7eb4000ef49de63d36c8909993bc362ba16
+
+
+[github_repo]
+NicolaOrritos/bagarino
+
+
