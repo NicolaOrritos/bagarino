@@ -9,10 +9,15 @@ bagarino can be used as a support for a licensing server and as an helper to oth
 
 Install
 -------
-	npm install bagarino
+	npm install -g bagarino
 
 Usage
 -----
+_bagarino_ needs Redis (http://redis.io/) to work.
+To start bagarino run the following command:
+
+	bagarino
+
 Here's a detailed guide on how to call bagarino for retrieving new tickets and/or validating old ones.
 
 ### New tickets
@@ -86,8 +91,8 @@ The answer will carry some more info when the ticket is still valid:
 
 In the previous example the expiration policy and the TTL (Time-To-Live) of the ticket are returned, as well as its status.
 The parameter *"expires_in"* has to be read based on the policy of the ticket:
- * When the policy is **time_based** then _"expires_in"_ is the number of seconds before the ticket expires
- * When the policy is **requests_based** the value of _"expires_in"_ is the number of requests before the ticket expires
+ * When the policy is **time_based** then *"expires_in"* is the number of seconds before the ticket expires
+ * When the policy is **requests_based** the value of *"expires_in"* is the number of requests before the ticket expires
 
 
 ### Expired tickets
