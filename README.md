@@ -7,6 +7,10 @@ When tickets expire simply ask bagarino for new ones.
 bagarino can be used as a support for a licensing server and as an helper to other systems in an authentication scenario.
 
 
+Install
+-------
+	npm install bagarino
+
 Usage
 -----
 Here's a detailed guide on how to call bagarino for retrieving new tickets and/or validating old ones.
@@ -36,7 +40,8 @@ A different policy can be used by specifying the _"policy"_ parameter in query-s
  * **policy=time_based** is the default one. Add "seconds=300" to make the ticket expire after the non-default delay of 5 minutes.
  * **policy=requests_based** makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.
   * **policy=cascading** makes the ticket _depend_ on another one: once the _dependency_ ticket expires the _dependent_ one does as well.
- * **policy=manual_expiration** makes the ticket perpetual, unless you make it expire manually by calling the _"expire"_ verb (explained some lines below)
+ * **policy=manual_expiration** makes the ticket perpetual, unless you make it expire manually by calling the _"expire"_ verb (explained some lines below).
+ * **policy=bandwidth_based** makes the ticket perpetual as well, but the number of requests for it that can be done within a minute is limited.
 
 Let's see some requests that create tickets with different expiration policies:
 
@@ -55,12 +60,17 @@ Let's see some requests that create tickets with different expiration policies:
     http://localhost:8124/tickets/new?policy=manual_expiration
     200 OK {"result":"OK","ticket":"f57d75c23f6a49951a6e886bbc60de74bc02ef33","policy":"manual_expiration"}
 
-The last kind of tickets has a manual expiration policy, so you must call an appropriate verb to make it expire:
+When using the manual expiration policy you must call an appropriate verb to make the ticket expire:
 
     http://localhost:8124/tickets/f57d75c23f6a49951a6e886bbc60de74bc02ef33/expire
     200 OK {"status":"EXPIRED"}
 
 Subsequent requests for that ticket will give an "EXPIRED" status.
+
+Finally, bandwidth-based tickets can be created with the following requests:
+
+	http://localhost:8124/tickets/new?policy=bandwidth_based&reqs_per_minute=100
+    200 OK {"result": "OK", "ticket": "2966c1fc73a0d78c96bdc18fb67ed99af1356b8a", "requests_per_minute": 100, "policy": "bandwidth_based"}
 
 
 ### Valid tickets
