@@ -13,12 +13,13 @@ Install
 
 Usage
 -----
-_bagarino_ needs Redis (http://redis.io/) to work.
+_bagarino_ needs Redis (http://redis.io/) to be installed and running in order to work.
 To start bagarino run the following command:
 
-	bagarino
+	sudo bagarino
 
-Here's a detailed guide on how to call bagarino for retrieving new tickets and/or validating old ones.
+_bagarino_ is now up and running, listening for requests on port 8124.
+Here's a detailed guide on how to submit a request for creating new tickets and/or validating old ones.
 
 ### New tickets
 Obtain a new ticket:
