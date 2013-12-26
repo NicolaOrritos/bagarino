@@ -31,16 +31,22 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <p>"bagarino" <em>sells</em> you tickets and can tell a real ticket from a fake one. Simple, fast and RESTful.
-Ask it for a new ticket and it'll give you. Then ask it whether a ticket is still valid or expired. Or whether it is a fake. It'll know for sure.
-When tickets expire simply ask bagarino for new ones.</p>
+        <p>"bagarino" <em>sells</em> you tickets and can tell a real ticket from a fake one. Simple, fast and RESTful.</p>
+          <p>
+Ask it for a new ticket and it'll give you (Free tickets! Yessss!). Ask it whether a certain ticket is still valid or expired; or whether it is a fake. It'll know for sure.</p>
+<p>When tickets expire simply ask bagarino for new ones.</p>
 
-<p>bagarino can be used as a support for a licensing server and as an helper to other systems in an authentication scenario.</p>
+<p><em>bagarino</em> can be used as a support for a licensing server and as an helper to other systems in an authentication scenario.</p>
 
-<h2>
-<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
+<h2><a name="install" class="anchor" href="#install"><span class="octicon octicon-link"></span></a>Install</h2>
+          <pre><code>npm install -g bagarino</code></pre>
+<p><em>bagarino</em> needs <a href="http://redis.io/">Redis</a> to be installed and running in order to work.</p>
 
-<p>Here's a detailed guide on how to call bagarino for retrieving new tickets and/or validating old ones.</p>
+<h2><a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>          
+<p><pre><code>sudo bagarino</code></pre>
+starts the server, that's now listening for requests on port 8124.</p>
+
+<p>The following paragraphs are a detailed guide on how to submit such requests for creating/validating tickets</p>
 
 <h3>
 <a name="new-tickets" class="anchor" href="#new-tickets"><span class="octicon octicon-link"></span></a>New tickets</h3>
@@ -93,13 +99,17 @@ http://localhost:8124/tickets/new?policy=manual_expiration
 200 OK {"result":"OK","ticket":"f57d75c23f6a49951a6e886bbc60de74bc02ef33","policy":"manual_expiration"}
 </code></pre>
 
-<p>The last kind of tickets has a manual expiration policy, so you must call an appropriate verb to make it expire:</p>
+<p>When using the manual expiration policy you must call an appropriate verb to make the ticket expire:</p>
 
 <pre><code>http://localhost:8124/tickets/f57d75c23f6a49951a6e886bbc60de74bc02ef33/expire
 200 OK {"status":"EXPIRED"}
 </code></pre>
-
-<p>Subsequent requests for that ticket will give an "EXPIRED" status.</p>
+<p>Subsequent requests for that ticket will still give an "EXPIRED" status, of course.</p>
+<p>Finally, bandwidth-based tickets can be created with the following requests:</p>
+<pre><code>
+http://localhost:8124/tickets/new?policy=bandwidth_based&reqs_per_minute=100
+200 OK {"result": "OK", "ticket": "2966c1fc73a0d78c96bdc18fb67ed99af1356b8a", "requests_per_minute": 100, "policy": "bandwidth_based"}
+</code></pre>
 
 <h3>
 <a name="valid-tickets" class="anchor" href="#valid-tickets"><span class="octicon octicon-link"></span></a>Valid tickets</h3>
