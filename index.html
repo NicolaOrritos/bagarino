@@ -83,7 +83,9 @@ A different policy can be used by specifying the <em>"policy"</em> parameter in 
 <li>
 <strong>policy=requests_based</strong> makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.</li>
 <li>
-<strong>policy=manual_expiration</strong> makes the ticket perpetual, unless you make it expire manually by calling the <em>"expire"</em> verb (explained some lines below)</li>
+<strong>policy=manual_expiration</strong> makes the ticket perpetual, unless you make it expire manually by calling the <em>"expire"</em> verb (explained some lines below).</li>
+<li><strong>policy=bandwidth_based</strong> makes the ticket perpetual as well, but the number of requests for it that can be done within a minute is limited.</li>
+
 </ul><p>Let's see some requests that create tickets with different expiration policies:</p>
 
 <pre><code>http://localhost:8124/tickets/new?policy=requests_based&amp;requests=5
