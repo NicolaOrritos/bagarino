@@ -1,0 +1,3 @@
+!#/bin/sh
+
+../scripts/start_prod.sh
