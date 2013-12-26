@@ -1,6 +1,3 @@
 #!/bin/sh
 
-echo $PWD
-echo $PATH
-
 NODE_ENV=production node app
