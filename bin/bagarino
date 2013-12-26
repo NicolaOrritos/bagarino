@@ -1,3 +1,6 @@
-!#/bin/sh
+#!/bin/sh
 
-../scripts/start_prod.sh
+echo $PWD
+echo $PATH
+
+NODE_ENV=production node app

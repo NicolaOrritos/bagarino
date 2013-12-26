@@ -62,9 +62,7 @@ else
     {
         app.use(express.errorHandler());
         
-        fs.mkdir("logs");
-        
-        global.log = new Log("info", fs.createWriteStream("logs/worker_" + cluster.worker.id + ".log"));
+        global.log = new Log("info", fs.createWriteStream("/var/log/bagarino_w" + cluster.worker.id + ".log"));
     });
 
 
