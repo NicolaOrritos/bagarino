@@ -112,6 +112,8 @@ http://localhost:8124/tickets/new?policy=manual_expiration
 http://localhost:8124/tickets/new?policy=bandwidth_based&reqs_per_minute=100
 200 OK {"result": "OK", "ticket": "2966c1fc73a0d78c96bdc18fb67ed99af1356b8a", "requests_per_minute": 100, "policy": "bandwidth_based"}
 </code></pre>
+<p>Bandwidth-based tickets are <em>eternal</em>, never-ending tickets that can be <em>spent</em> a fixed amount of times within a minute.</p>
+<p>They provide a simple way of dealing with a <strong>MAX-REQUESTS-PER-MINUTE</strong> problem.</p>
 
 <h3>
 <a name="valid-tickets" class="anchor" href="#valid-tickets"><span class="octicon octicon-link"></span></a>Valid tickets</h3>
