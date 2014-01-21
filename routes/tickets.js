@@ -50,6 +50,9 @@ function calculateExpirationPolicy(query_string, save_ticket)
             // Track an optional context for this ticket
             context: undefined,
             
+            // Auto-renewable ticket?
+            autorenew: false,
+            
             // Number of seconds/requests until this ticket expires
             expires_in: undefined,
             remember_until: DEFAULT_REMEMBER_UNTIL
@@ -60,6 +63,11 @@ function calculateExpirationPolicy(query_string, save_ticket)
         if (query_string.context)
         {
             policy.context = query_string.context;
+        }
+        
+        if (query_string.autorenew)
+        {
+            policy.autorenew = (query_string.autorenew === true || query_string.autorenew === "true");
         }
         
         
@@ -85,13 +93,17 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 policy.expires_in = DEFAULT_EXPIRES_IN_REQUESTS;
             }
             
+            if (policy.autorenew)
+            {
+                policy.original_expires_in = policy.expires_in;
+            }
+            
             
             save_ticket.call(this, policy);
         }
         else if (query_string.policy == "manual_expiration")
         {
             policy.manual_expiration = true;
-            
             
             save_ticket.call(this, policy);
         }
@@ -215,6 +227,18 @@ function createNewTicket()
     return ticket;
 }
 
+function isAutorenewable(policy)
+{
+    var result = false;
+    
+    if (policy)
+    {
+        result = (policy.autorenew === true || policy.autorenew === "true");
+    }
+    
+    return result;
+}
+
 function handleTimeBasedTicketResponse(ticket_base, res)
 {
     client.select(REDIS_DB, function()
@@ -255,7 +279,30 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                         client.hset(VALID_PREFIX + ticket_base, "policy", JSON.stringify(policy));
                         
                         var reply = {"status": VALID_TICKET, "expires_in": policy.expires_in, "policy": "requests_based"};
-            
+                        
+                        if (isAutorenewable(policy))
+                        if (policy.expires_in === 0 || policy.expires_in === "0")
+                        {
+                            // Create a new ticket and serve it alongside the other info
+                            var newTicket = createNewTicket();
+                            var valid_ticket   = VALID_PREFIX   + newTicket;
+                            var expired_ticket = EXPIRED_PREFIX + newTicket;
+                            
+                            var newPolicy = policy;
+                            newPolicy.expires_in = newPolicy.original_expires_in = policy.original_expires_in;
+                            
+                            // First save the "next" ticket:
+                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "policy", JSON.stringify(newPolicy));
+                            
+                            // Then save its "to-be-expired" counterpart:
+                            client.set(expired_ticket, EXPIRED_TICKET);
+                            client.expire(expired_ticket, policy.remember_until);
+                            
+                            reply = {"status": VALID_TICKET, "expires_in": 0, "policy": "requests_based", "next_ticket": newTicket};
+                        }
+                        
+                        
                         res.send(reply);
                     }
                 }
