@@ -1,6 +1,7 @@
 
 // [todo] - Add a clarification about bandwidth-based tickets: they never expire, they simply can be spent a fixed amount of times within a minute
 // [todo] - Add new docs for auto-renewable tickets
+// [todo] - Add new docs for can_force_expiration switch
 
 var hash = require('node_hash');
 var redis = require("redis");
