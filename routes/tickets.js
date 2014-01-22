@@ -54,6 +54,9 @@ function calculateExpirationPolicy(query_string, save_ticket)
             // Auto-renewable ticket?
             autorenew: false,
             
+            // Can expiration be forced?
+            can_force_expiration: false,
+            
             // Number of seconds/requests until this ticket expires
             expires_in: undefined,
             remember_until: DEFAULT_REMEMBER_UNTIL
@@ -69,6 +72,11 @@ function calculateExpirationPolicy(query_string, save_ticket)
         if (query_string.autorenew)
         {
             policy.autorenew = (query_string.autorenew === true || query_string.autorenew === "true");
+        }
+        
+        if (query_string.can_force_expiration)
+        {
+            policy.can_force_expiration = (query_string.can_force_expiration === true || query_string.can_force_expiration === "true");
         }
         
         
@@ -790,7 +798,8 @@ exports.expire = function(req, res)
                         {
                             var policy = JSON.parse(policy_str);
                             
-                            if (policy.manual_expiration)
+                            if (policy.manual_expiration === true
+                                || policy.can_force_expiration === true)
                             {
                                 var reply = {"status": EXPIRED_TICKET};
                                     
