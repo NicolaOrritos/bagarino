@@ -101,17 +101,17 @@ Expired tickets are kept in memory by bagarino for 10 days. After that time a ca
 
 
 ### Forceable manual expiration
-Even tickets with a different policy than _"manual_expiration"_ can be forcibly _ended_ by calling the _expire_ verb, provided that they had been created with an ad-hoc option, _"can_force_expiration"_:
+Even tickets with a different policy than *"manual_expiration"* can be forcibly ended by calling the *expire* verb, provided that they had been created with an ad-hoc option, *"can\_force\_expiration"*:
 
 	http://localhost:8124/tickets/new?policy=requests_based&can_force_expiration=true
     200 OK {"result": "OK", "ticket": "d81d9b01e323510ba919c0f54fbfba5b7903e326", "expires_in": 100, "policy": "requests_based"}
 
-The result will look identical to any other _requests_based_-policied ticket but the _can_force_expiration_ option enables the call to the _expire_ verb to successfully end this ticket life:
+The result will look identical to any other *requests_based*-policied ticket but the *can\_force\_expiration* option enables the call to the *expire* verb to successfully end this ticket life:
 
 	http://localhost:8124/tickets/d81d9b01e323510ba919c0f54fbfba5b7903e326/expire
     200 OK {"status": "EXPIRED"}
 
-Creating the ticket without this option and subsequently calling _expire_ would have produced the following error:
+Creating the ticket without this option and subsequently calling *expire* would have produced the following error:
 	400 Bad Request {"status": "ERROR", "cause": "different_policy"}
 
 
