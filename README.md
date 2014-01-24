@@ -100,6 +100,21 @@ The parameter *"expires_in"* has to be read based on the policy of the ticket:
 Expired tickets are kept in memory by bagarino for 10 days. After that time a call to their status will return "NOT_VALID" as it would for a ticket that didn't exist in the first place.
 
 
+### Forceable manual expiration
+Even tickets with a different policy than _"manual_expiration"_ can be forcibly _ended_ by calling the _expire_ verb, provided that they had been created with an ad-hoc option, _"can_force_expiration"_:
+
+	http://localhost:8124/tickets/new?policy=requests_based&can_force_expiration=true
+    200 OK {"result": "OK", "ticket": "d81d9b01e323510ba919c0f54fbfba5b7903e326", "expires_in": 100, "policy": "requests_based"}
+
+The result will look identical to any other _requests_based_-policied ticket but the _can_force_expiration_ option enables the call to the _expire_ verb to successfully end this ticket life:
+
+	http://localhost:8124/tickets/d81d9b01e323510ba919c0f54fbfba5b7903e326/expire
+    200 OK {"status": "EXPIRED"}
+
+Creating the ticket without this option and subsequently calling _expire_ would have produced the following error:
+	400 Bad Request {"status": "ERROR", "cause": "different_policy"}
+
+
 ### Mass-creation of tickets
 It's possible to create more tickets at once by adding the paramenter "count" to the query-string of the verb _new_, followed by the number of tickets to be created.
 The maximum number of tickets that can be created this way is capped to prevent overloading the system.
@@ -128,10 +143,9 @@ The way to ask for a context-bound token is as follows:
 
 
 
-
 LICENSE - Apache License v2
 ---------------------------
-Copyright (c) 2013 Nicola Orritos
+Copyright (c) 2014 Nicola Orritos
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use these files except in compliance with the License.
