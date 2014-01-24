@@ -112,6 +112,7 @@ The result will look identical to any other *requests_based*-policied ticket but
     200 OK {"status": "EXPIRED"}
 
 Creating the ticket without this option and subsequently calling *expire* would have produced the following error:
+
 	400 Bad Request {"status": "ERROR", "cause": "different_policy"}
 
 
