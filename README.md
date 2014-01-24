@@ -24,15 +24,15 @@ Here's a detailed guide on how to submit a request for creating new tickets and/
 ### New tickets
 Obtain a new ticket:
 
-    http://localhost:8124/tickets/new
-    200 OK {"result":"OK","ticket":"7fd88ab09e40f99767e17df27a723d05562d573b","expires_in":60,"policy":"time_based"}
+    http://localhost:8124/tickets/new?policy=requests_based
+    200 OK {"result":"OK","ticket":"7fd88ab09e40f99767e17df27a723d05562d573b","expires_in":100,"policy":"requests_based"}
 
 See the status of the newly created ticket:
 
     http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status
-    200 OK {"status":"VALID","expires_in":54,"policy":"time_based"}
+    200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
-After a few seconds (60 by default) the ticket expires. Then, asking for it will result in the following response:
+After some requests (99 more in this case) the ticket expires. Then, asking for it will result in the following response:
 
     200 OK {"status": "EXPIRED"}
 
@@ -45,7 +45,7 @@ By default new tickets have a time-based expire policy and a time-to-live of 60 
 A different policy can be used by specifying the _"policy"_ parameter in query-string:
  * **policy=time_based** is the default one. Add "seconds=300" to make the ticket expire after the non-default delay of 5 minutes.
  * **policy=requests_based** makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.
-  * **policy=cascading** makes the ticket _depend_ on another one: once the _dependency_ ticket expires the _dependent_ one does as well.
+ * **policy=cascading** makes the ticket _depend_ on another one: once the _dependency_ ticket expires the _dependent_ one does as well.
  * **policy=manual_expiration** makes the ticket perpetual, unless you make it expire manually by calling the _"expire"_ verb (explained some lines below).
  * **policy=bandwidth_based** makes the ticket perpetual as well, but the number of requests for it that can be done within a minute is limited.
 
