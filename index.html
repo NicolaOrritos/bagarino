@@ -31,39 +31,46 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <p>"bagarino" <em>sells</em> you tickets and can tell a real ticket from a fake one. Simple, fast and RESTful.</p>
-          <p>
-Ask it for a new ticket and it'll give you (Free tickets! Yessss!). Ask it whether a certain ticket is still valid or expired; or whether it is a fake. It'll know for sure.</p>
-<p>When tickets expire simply ask bagarino for new ones.</p>
+<p>"bagarino" <em>sells</em> you tickets and can tell a real ticket from a fake one. Simple, fast and RESTful.
+Ask it for a new ticket and it'll give you. Then ask it whether a ticket is still valid or expired. Or whether it is a fake. It'll know for sure.
+When tickets expire simply ask bagarino for new ones.</p>
 
-<p><em>bagarino</em> can be used as a support for a licensing server and as an helper to other systems in an authentication scenario.</p>
+<p>bagarino can be used as a support for a licensing server and as an helper to other systems in an authentication scenario.</p>
 
-<h2><a name="install" class="anchor" href="#install"><span class="octicon octicon-link"></span></a>Install</h2>
-          <pre><code>npm install -g bagarino</code></pre>
-<p><em>bagarino</em> needs <a href="http://redis.io/">Redis</a> to be installed and running in order to work.</p>
+<h2>
+<a name="install" class="anchor" href="#install"><span class="octicon octicon-link"></span></a>Install</h2>
 
-<h2><a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>          
-<p><pre><code>sudo bagarino</code></pre>
-starts the server, that's now listening for requests on port 8124.</p>
+<pre><code>npm install -g bagarino
+</code></pre>
 
-<p>The following paragraphs are a detailed guide on how to submit such requests for creating/validating tickets</p>
+<h2>
+<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
+
+<p><em>bagarino</em> needs Redis (<a href="http://redis.io/">http://redis.io/</a>) to be installed and running in order to work.
+To start bagarino run the following command:</p>
+
+<pre><code>sudo bagarino
+</code></pre>
+
+<p><em>bagarino</em> is now up and running, listening for requests on port 8124.
+Here's a detailed guide on how to submit a request for creating new tickets and/or validating old ones.</p>
 
 <h3>
 <a name="new-tickets" class="anchor" href="#new-tickets"><span class="octicon octicon-link"></span></a>New tickets</h3>
 
 <p>Obtain a new ticket:</p>
 
-<pre><code>http://localhost:8124/tickets/new
-200 OK {"result":"OK","ticket":"7fd88ab09e40f99767e17df27a723d05562d573b","expires_in":60,"policy":"time_based"}
+<pre><code>http://localhost:8124/tickets/new?policy=requests_based
+200 OK {"result":"OK","ticket":"7fd88ab09e40f99767e17df27a723d05562d573b","expires_in":100,"policy":"requests_based"}
 </code></pre>
 
 <p>See the status of the newly created ticket:</p>
 
 <pre><code>http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status
-200 OK {"status":"VALID","expires_in":54,"policy":"time_based"}
+200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 </code></pre>
 
-<p>After a few seconds (60 by default) the ticket expires. Then, asking for it will result in the following response:</p>
+<p>After some requests (99 more in this case) the ticket expires. Then, asking for it again will result in the following response:</p>
 
 <pre><code>200 OK {"status": "EXPIRED"}
 </code></pre>
@@ -83,9 +90,11 @@ A different policy can be used by specifying the <em>"policy"</em> parameter in 
 <li>
 <strong>policy=requests_based</strong> makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.</li>
 <li>
+<strong>policy=cascading</strong> makes the ticket <em>depend</em> on another one: once the <em>dependency</em> ticket expires the <em>dependent</em> one does as well.</li>
+<li>
 <strong>policy=manual_expiration</strong> makes the ticket perpetual, unless you make it expire manually by calling the <em>"expire"</em> verb (explained some lines below).</li>
-<li><strong>policy=bandwidth_based</strong> makes the ticket perpetual as well, but the number of requests for it that can be done within a minute is limited.</li>
-
+<li>
+<strong>policy=bandwidth_based</strong> makes the ticket perpetual as well, but the number of requests for it that can be done within a minute is limited.</li>
 </ul><p>Let's see some requests that create tickets with different expiration policies:</p>
 
 <pre><code>http://localhost:8124/tickets/new?policy=requests_based&amp;requests=5
@@ -97,6 +106,9 @@ http://localhost:8124/tickets/new?policy=requests_based
 http://localhost:8124/tickets/new?policy=time_based&amp;seconds=120
 200 OK {"result":"OK","ticket":"50ab14d6f5dd082e8ed343f7adb5f916fa76188a","expires_in":120,"policy":"time_based"}
 
+http://localhost:8124/tickets/new?policy=cascading&amp;depends_on=f073145dfdf45a6e85d0f758f78fd627fa301983
+200 OK {"result":"OK","ticket":"9ae23360fb4e9b3348917eb5e9b8a8e725b0dcb0","depends_on":"f073145dfdf45a6e85d0f758f78fd627fa301983","policy":"cascading"}
+
 http://localhost:8124/tickets/new?policy=manual_expiration
 200 OK {"result":"OK","ticket":"f57d75c23f6a49951a6e886bbc60de74bc02ef33","policy":"manual_expiration"}
 </code></pre>
@@ -106,14 +118,14 @@ http://localhost:8124/tickets/new?policy=manual_expiration
 <pre><code>http://localhost:8124/tickets/f57d75c23f6a49951a6e886bbc60de74bc02ef33/expire
 200 OK {"status":"EXPIRED"}
 </code></pre>
-<p>Subsequent requests for that ticket will still give an "EXPIRED" status, of course.</p>
+
+<p>Subsequent requests for that ticket will give an "EXPIRED" status.</p>
+
 <p>Finally, bandwidth-based tickets can be created with the following requests:</p>
-<pre><code>
-http://localhost:8124/tickets/new?policy=bandwidth_based&reqs_per_minute=100
+
+<pre><code>http://localhost:8124/tickets/new?policy=bandwidth_based&amp;reqs_per_minute=100
 200 OK {"result": "OK", "ticket": "2966c1fc73a0d78c96bdc18fb67ed99af1356b8a", "requests_per_minute": 100, "policy": "bandwidth_based"}
 </code></pre>
-<p>They are <em>eternal</em>, never-ending tickets that can be <em>spent</em> a fixed amount of times within a minute.</p>
-<p>They provide a simple way of dealing with a <strong>MAX-REQUESTS-PER-MINUTE</strong> problem.</p>
 
 <h3>
 <a name="valid-tickets" class="anchor" href="#valid-tickets"><span class="octicon octicon-link"></span></a>Valid tickets</h3>
@@ -140,6 +152,26 @@ The parameter <em>"expires_in"</em> has to be read based on the policy of the ti
 <a name="expired-tickets" class="anchor" href="#expired-tickets"><span class="octicon octicon-link"></span></a>Expired tickets</h3>
 
 <p>Expired tickets are kept in memory by bagarino for 10 days. After that time a call to their status will return "NOT_VALID" as it would for a ticket that didn't exist in the first place.</p>
+
+<h3>
+<a name="forceable-manual-expiration" class="anchor" href="#forceable-manual-expiration"><span class="octicon octicon-link"></span></a>Forceable manual expiration</h3>
+
+<p>Even tickets with a policy other than <em>"manual_expiration"</em> can be forcibly ended by calling the <em>expire</em> verb, provided that they had been created with an ad-hoc option, <em>"can_force_expiration"</em>:</p>
+
+<pre><code>http://localhost:8124/tickets/new?policy=requests_based&amp;can_force_expiration=true
+200 OK {"result": "OK", "ticket": "d81d9b01e323510ba919c0f54fbfba5b7903e326", "expires_in": 100, "policy": "requests_based"}
+</code></pre>
+
+<p>The result will look identical to any other <em>requests_based</em>-policied ticket but the <em>can_force_expiration</em> option enables the call to the <em>expire</em> verb to successfully end this ticket life:</p>
+
+<pre><code>http://localhost:8124/tickets/d81d9b01e323510ba919c0f54fbfba5b7903e326/expire
+200 OK {"status": "EXPIRED"}
+</code></pre>
+
+<p>Creating the ticket without this option and subsequently calling <em>expire</em> would have produced the following error:</p>
+
+<pre><code>400 Bad Request {"status": "ERROR", "cause": "different_policy"}
+</code></pre>
 
 <h3>
 <a name="mass-creation-of-tickets" class="anchor" href="#mass-creation-of-tickets"><span class="octicon octicon-link"></span></a>Mass-creation of tickets</h3>
@@ -177,7 +209,7 @@ In bagarino this is done by attaching a textual context to the ticket during the
 <h2>
 <a name="license---apache-license-v2" class="anchor" href="#license---apache-license-v2"><span class="octicon octicon-link"></span></a>LICENSE - Apache License v2</h2>
 
-<p>Copyright (c) 2013 Nicola Orritos</p>
+<p>Copyright (c) 2014 Nicola Orritos</p>
 
 <p>Licensed under the Apache License, Version 2.0 (the "License");
 you may not use these files except in compliance with the License.
