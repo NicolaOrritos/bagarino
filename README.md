@@ -32,7 +32,7 @@ See the status of the newly created ticket:
     http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status
     200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
-After some requests (99 more in this case) the ticket expires. Then, asking for it will result in the following response:
+After some requests (99 more in this case) the ticket expires. Then, asking for it again will result in the following response:
 
     200 OK {"status": "EXPIRED"}
 
