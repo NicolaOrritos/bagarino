@@ -1,4 +1,6 @@
 
+// [todo] - Add documentation for contexts-based multi-ticket expiration
+
 var redis = require("redis");
 
 var client = redis.createClient();
