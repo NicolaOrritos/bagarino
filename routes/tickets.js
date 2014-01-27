@@ -780,6 +780,11 @@ exports.status = function(req, res)
                                 {
                                     handleBandwidthTicketResponse(ticket_base, res);
                                 }
+                                
+                                
+                                // Additionally, refresh the expire counterpart of the ticket everytime we find a valid one [to avoid issue #8]
+                                client.set(EXPIRED_PREFIX + ticket_base, EXPIRED_TICKET);
+                                client.expire(EXPIRED_PREFIX + ticket_base, policy.remember_until);
                             }
                             else
                             {
