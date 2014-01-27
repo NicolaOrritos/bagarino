@@ -2,6 +2,7 @@
 // [todo] - Add a clarification about bandwidth-based tickets: they never expire, they simply can be spent a fixed amount of times within a minute
 // [todo] - Add new docs for auto-renewable tickets
 // [todo] - Add new docs for can_force_expiration switch
+// [todo] - What happens to a requests-based 10-requests-long ticket expired counterpart after DEFAULT_REMEMBER_UNTIL if I didn't ask for it never once?
 
 var hash = require('node_hash');
 var redis = require("redis");
@@ -22,6 +23,8 @@ var VALID_PREFIX = "VALID:";
 
 var EXPIRED_TICKET = "EXPIRED";
 var EXPIRED_PREFIX = "EXPIRED:";
+
+var CONTEXTS_PREFIX = "contexts:";
 
 var DEFAULT_EXPIRES_IN_SECONDS  = 60;
 var DEFAULT_EXPIRES_IN_REQUESTS = 100;
@@ -485,6 +488,26 @@ function handleBandwidthTicketResponse(ticket_base, res)
     });
 }
 
+function addToContextMap(context, ticket)
+{
+    if (context)
+    if (ticket)
+    {
+        context = CONTEXTS_PREFIX + context;
+        
+        client.select(REDIS_DB, function()
+        {
+            client.lpush(context, ticket, function(err)
+            {
+                if (err)
+                {
+                    console.log("Could not save '%s' to context '%s'", ticket, context);
+                }
+            });
+        });
+    }
+}
+
 
 exports.new = function(req, res)
 {
@@ -549,6 +572,12 @@ exports.new = function(req, res)
                             // Then save the "to-be-expired" counterpart:
                             client.set(expired_ticket, EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
+                            
+                            
+                            if (policy.context)
+                            {
+                                addToContextMap(policy.context, ticket_base);
+                            }
                         }
                         else if (policy.requests_based)
                         {
@@ -571,6 +600,12 @@ exports.new = function(req, res)
                             // Then save the "to-be-expired" counterpart:
                             client.set(expired_ticket, EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
+                            
+                            
+                            if (policy.context)
+                            {
+                                addToContextMap(policy.context, ticket_base);
+                            }
                         }
                         else if (policy.manual_expiration)
                         {
@@ -589,6 +624,12 @@ exports.new = function(req, res)
                             // Just save the ticket:
                             client.hset(valid_ticket, "content", VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
+                            
+                            
+                            if (policy.context)
+                            {
+                                addToContextMap(policy.context, ticket_base);
+                            }
                         }
                         else if (policy.cascading)
                         {
@@ -611,6 +652,12 @@ exports.new = function(req, res)
                             // Then save the "to-be-expired" counterpart:
                             client.set(expired_ticket, EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
+                            
+                            
+                            if (policy.context)
+                            {
+                                addToContextMap(policy.context, ticket_base);
+                            }
                         }
                         else if (policy.bandwidth_based)
                         {
@@ -631,6 +678,12 @@ exports.new = function(req, res)
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
                             
                             // No "to-be-expired" counterpart: bandwidth-based tickets never expire
+                            
+                            
+                            if (policy.context)
+                            {
+                                addToContextMap(policy.context, ticket_base);
+                            }
                         }
                         else
                         {

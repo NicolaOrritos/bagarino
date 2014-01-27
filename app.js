@@ -28,7 +28,8 @@ if (cluster.isMaster)
 else
 {
     var routes = {
-                     'tickets':   require('./routes/tickets')
+                     'tickets' :   require('./routes/tickets') ,
+                     'contexts':   require('./routes/contexts')
                  };
 
     var app = express();
@@ -70,6 +71,7 @@ else
     app.get('/tickets/new', routes.tickets.new);
     app.get('/tickets/:ticket/status', routes.tickets.status);
     app.get('/tickets/:ticket/expire', routes.tickets.expire);
+    app.get('/contexts/:context/expireall', routes.contexts.expireall);
 
 
     app.listen(PORT);
