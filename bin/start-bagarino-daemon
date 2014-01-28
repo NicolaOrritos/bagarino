@@ -1,58 +1,70 @@
 #!/usr/bin/env node
 
 /**
- * bin/node-simple-http-daemon
+ * bin/start-bagarino-daemon
  */
 
-console.log("Starting bagarino daemon...");
 
 // Everything above this line will be executed twice
 require("daemon")();
 
 
 var cluster = require("cluster");
+var fs = require('fs');
+
+console.log("Starting bagarino daemon...");
 
 
 // Number of CPUs
 var cpus = require("os").cpus().length;
 
+function workerExitRoutine(code, signal)
+{
+    console.log("Worker '%s' died with signal '%s' :(", cluster.worker.id, signal);
+    console.log("Restarting it...");
+    
+    
+    // Replace the dead worker, we're not sentimental
+    var worker = cluster.fork();
+    
+    worker.on("exit", workerExitRoutine);
+}
+
 /**
- * Creates a new worker when running as cluster master.
+ * Creates the children workers when running as cluster master.
  * Runs the HTTP server otherwise.
+ * 
+ * @param  {Number} count Number of workers to create.
  */
-function createWorker()
+function createWorkers(count)
 {
     if (cluster.isMaster)
     {
-        // Fork a worker if running as cluster master
-        var child = cluster.fork();
+        // Write the PID file:
+        var pid = process.pid.toString();
         
-        // Replace the dead worker, we're not sentimental
-        child.on("exit", function(code, signal)
+        fs.writeFile("/var/run/bagarino.pid", pid, function(err)
         {
-            console.log("Worker " + worker.id + " died :(");
-            console.log("Restarting it...");
-            
-            createWorker();
+            if (err)
+            {
+                console.log("Could not write PID file. Cause: %s", err);
+            }
         });
+        
+        
+        var workers = new Array();
+        
+        while (count-- > 0)
+        {
+            workers[count] = cluster.fork();
+            
+            workers[count].on("exit", workerExitRoutine);
+        }
     }
     else
     {
         // Run the bagarino server if running as worker
         require("../app");
-    }
-}
-
-/**
- * Creates the specified number of workers.
- * @param  {Number} n Number of workers to create.
- */
-function createWorkers(n)
-{
-    while (n > 0)
-    {
-        n--;
-        createWorker();
     }
 }
 
