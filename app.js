@@ -1,8 +1,6 @@
-
-/**
- * Module dependencies.
+/*
+ * REQUIRES
  */
-
 var fs      = require("fs");
 var cluster = require("cluster");
 var express = require("express");
@@ -10,83 +8,91 @@ var express = require("express");
 var Log     = require("log");
 
 
+/*
+ * CONFIGURATION
+ */
+var PORT = 8124;
 
-// Code to run if we're in the master process
-if (cluster.isMaster)
+var routes = {
+                 'tickets' :   require('./routes/tickets') ,
+                 'contexts':   require('./routes/contexts')
+             };
+
+var app = express();
+
+app.configure(function()
 {
-    // Count the machine's CPUs
-    var cpuCount = require('os').cpus().length;
+    app.set('view engine', 'jade');
+    app.set('views', __dirname + '/views');
 
-    // Create a worker for each CPU
-    for (var i = 0; i < cpuCount; i += 1)
-    {
-        cluster.fork();
-    }
-
-// Code to run if we're in a worker process
-}
-else
-{
-    var routes = {
-                     'tickets' :   require('./routes/tickets') ,
-                     'contexts':   require('./routes/contexts')
-                 };
-
-    var app = express();
-
-
-    // Configuration
-
-    var PORT = 8124;
-
-    app.configure(function()
-    {
-        app.set('view engine', 'jade');
-        app.set('views', __dirname + '/views');
-
-        app.use(express.bodyParser());
-        app.use(express.methodOverride());
-        app.use(app.router);
-        app.use(express.static(__dirname + '/public'));
-    });
-
-    app.configure('development', function()
-    {
-        app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
-        app.locals.pretty = true;
-        
-        // Let logs go to stdout
-        global.log = new Log("debug");
-    });
-
-    app.configure('production', function()
-    {
-        app.use(express.errorHandler());
-        
-        global.log = new Log("info", fs.createWriteStream("/var/log/bagarino_w" + cluster.worker.id + ".log"));
-    });
-
-
-    // Routes
-    app.get('/tickets/new', routes.tickets.new);
-    app.get('/tickets/:ticket/status', routes.tickets.status);
-    app.get('/tickets/:ticket/expire', routes.tickets.expire);
-    app.get('/contexts/:context/expireall', routes.contexts.expireall);
-
-
-    app.listen(PORT);
-
-    global.log.info("BAGARINO-Express server listening on port %d in %s mode [worker is %s]",
-                    PORT,
-                    app.settings.env,
-                    cluster.worker.id);
-}
-
-// Listen for dying workers
-cluster.on('exit', function (worker)
-{
-    // Replace the dead worker,
-    // we're not sentimental
-    global.log.info('Worker ' + worker.id + ' died :(');
-    cluster.fork();
+    app.use(express.bodyParser());
+    app.use(express.methodOverride());
+    app.use(app.router);
+    app.use(express.static(__dirname + '/public'));
 });
+
+app.configure('development', function()
+{
+    app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
+    app.locals.pretty = true;
+    
+    // Let logs go to stdout
+    global.log = new Log("debug");
+});
+
+app.configure('production', function()
+{
+    app.use(express.errorHandler());
+    
+    global.log = new Log("info", fs.createWriteStream("/var/log/bagarino_w" + cluster.worker.id + ".log"));
+});
+
+
+/*
+ * ROUTES BINDING
+ */
+app.get('/tickets/new', routes.tickets.new);
+app.get('/tickets/:ticket/status', routes.tickets.status);
+app.get('/tickets/:ticket/expire', routes.tickets.expire);
+app.get('/contexts/:context/expireall', routes.contexts.expireall);
+
+
+/*
+ * START ALL
+ */
+app.listen(PORT, function()
+{
+    // Drop privileges if we are running as root
+    if (process.getgid() === 0)
+    {
+        process.setgid("nobody");
+        process.setuid("nobody");
+    }
+});
+
+global.log.info("BAGARINO server listening on port %d in %s mode [worker is %s]",
+                PORT,
+                app.settings.env,
+                cluster.worker.id);
+
+
+/*
+ * PROCESS HANDLING
+ */
+
+// Gracefully handle SIGTERM
+process.on("SIGTERM", function()
+{
+    if (app)
+    {
+        app.close(function()
+        {
+            // Disconnect from cluster master
+            if (process.disconnect)
+            {
+                process.disconnect();
+            }
+        });
+    }
+});
+

@@ -1,13 +1,14 @@
 {
-    "name": "bagarino"
-  , "version": "0.5.2"
-  , "private": false
-  , "dependencies": {
-      "express": ""
-    , "redis": ""
-    , "node_hash": ""
-    , "hiredis": ""
-    , "log": ""
-  }
-  , "bin": "bin/bagarino"
+  "name": "bagarino",
+  "version": "0.5.2",
+  "private": false,
+  "dependencies": {
+    "express": "",
+    "redis": "",
+    "node_hash": "",
+    "hiredis": "",
+    "log": "",
+    "daemon": ""
+  },
+  "bin": "bin/start-bagarino-daemon"
 }
