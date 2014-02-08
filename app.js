@@ -6,21 +6,35 @@
  * REQUIRES
  */
 var fs      = require("fs");
+var http    = require("http");
+var https   = require("https");
 var cluster = require("cluster");
 var express = require("express");
-
 var Log     = require("log");
 
 
 /*
  * CONFIGURATION
  */
-var PORT = 8124;
+var PORT       = 8124;
+var HTTPS_PORT = 8443;
 
 var routes = {
                  'tickets' :   require('./routes/tickets') ,
                  'contexts':   require('./routes/contexts')
              };
+
+var SERVER_TYPE = {
+                      "HTTPS": {
+                          "ENABLED": true,
+                          "KEY":  "private/key.pem",
+                          "CERT": "private/cert.crt"
+                      },
+                      "HTTP": {
+                          "ENABLED": false
+                      }
+                  };
+
 
 var app = express();
 
@@ -64,20 +78,46 @@ app.get('/contexts/:context/expireall', routes.contexts.expireall);
 /*
  * START ALL
  */
-app.listen(PORT, function()
+if (SERVER_TYPE.HTTP.ENABLED)
 {
-    // Drop privileges if we are running as root
-    if (process.getgid() === 0)
+    http.createServer(app).listen(PORT, function()
     {
-        process.setgid("nobody");
-        process.setuid("nobody");
-    }
-});
+        // Drop privileges if we are running as root
+        if (process.getgid() === 0)
+        {
+            process.setgid("nobody");
+            process.setuid("nobody");
+        }
+        
+        global.log.info("BAGARINO HTTP server listening on port %d in %s mode [worker is %s]",
+                        PORT,
+                        app.settings.env,
+                        cluster.worker.id);
+    });
+}
 
-global.log.info("BAGARINO server listening on port %d in %s mode [worker is %s]",
-                PORT,
-                app.settings.env,
-                cluster.worker.id);
+if (SERVER_TYPE.HTTPS.ENABLED)
+{
+    var privateKey  = fs.readFileSync(SERVER_TYPE.HTTPS.KEY,  "utf8");
+    var certificate = fs.readFileSync(SERVER_TYPE.HTTPS.CERT, "utf8");
+    
+    var credentials = {key: privateKey, cert: certificate};
+    
+    https.createServer(credentials, app).listen(HTTPS_PORT, function()
+    {
+        // Drop privileges if we are running as root
+        if (process.getgid() === 0)
+        {
+            process.setgid("nobody");
+            process.setuid("nobody");
+        }
+        
+        global.log.info("BAGARINO HTTPS server listening on port %d in %s mode [worker is %s]",
+                        HTTPS_PORT,
+                        app.settings.env,
+                        cluster.worker.id);
+    });
+}
 
 
 /*
