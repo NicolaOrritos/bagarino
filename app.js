@@ -10,30 +10,32 @@ var http    = require("http");
 var https   = require("https");
 var cluster = require("cluster");
 var express = require("express");
+var sjl     = require("sjl");
 var Log     = require("log");
 
 
 /*
  * CONFIGURATION
  */
-var PORT       = 8124;
-var HTTPS_PORT = 8443;
 
-var routes = {
-                 'tickets' :   require('./routes/tickets') ,
-                 'contexts':   require('./routes/contexts')
-             };
 
-var SERVER_TYPE = {
-                      "HTTPS": {
-                          "ENABLED": true,
-                          "KEY":  "private/key.pem",
-                          "CERT": "private/cert.crt"
-                      },
-                      "HTTP": {
-                          "ENABLED": false
-                      }
-                  };
+var defaults = {
+    "PORT": 8124,
+    "HTTPS_PORT": 8443,
+
+    "SERVER_TYPE": {
+        "HTTPS": {
+            "ENABLED": true,
+            "KEY":  "private/key.pem",
+            "CERT": "private/cert.crt"
+        },
+        "HTTP": {
+            "ENABLED": false
+        }
+    }
+};
+
+var CONF = sjl("/etc/bagarino.conf", defaults);
 
 
 var app = express();
@@ -69,6 +71,11 @@ app.configure('production', function()
 /*
  * ROUTES BINDING
  */
+var routes = {
+    'tickets' :   require('./routes/tickets') ,
+    'contexts':   require('./routes/contexts')
+};
+
 app.get('/tickets/new', routes.tickets.new);
 app.get('/tickets/:ticket/status', routes.tickets.status);
 app.get('/tickets/:ticket/expire', routes.tickets.expire);
@@ -78,9 +85,9 @@ app.get('/contexts/:context/expireall', routes.contexts.expireall);
 /*
  * START ALL
  */
-if (SERVER_TYPE.HTTP.ENABLED)
+if (CONF.SERVER_TYPE.HTTP.ENABLED)
 {
-    http.createServer(app).listen(PORT, function()
+    http.createServer(app).listen(CONF.PORT, function()
     {
         // Drop privileges if we are running as root
         if (process.getgid() === 0)
@@ -90,20 +97,20 @@ if (SERVER_TYPE.HTTP.ENABLED)
         }
         
         global.log.info("BAGARINO HTTP server listening on port %d in %s mode [worker is %s]",
-                        PORT,
+                        CONF.PORT,
                         app.settings.env,
                         cluster.worker.id);
     });
 }
 
-if (SERVER_TYPE.HTTPS.ENABLED)
+if (CONF.SERVER_TYPE.HTTPS.ENABLED)
 {
-    var privateKey  = fs.readFileSync(SERVER_TYPE.HTTPS.KEY,  "utf8");
-    var certificate = fs.readFileSync(SERVER_TYPE.HTTPS.CERT, "utf8");
+    var privateKey  = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.KEY,  "utf8");
+    var certificate = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.CERT, "utf8");
     
     var credentials = {key: privateKey, cert: certificate};
     
-    https.createServer(credentials, app).listen(HTTPS_PORT, function()
+    https.createServer(credentials, app).listen(CONF.HTTPS_PORT, function()
     {
         // Drop privileges if we are running as root
         if (process.getgid() === 0)
@@ -113,7 +120,7 @@ if (SERVER_TYPE.HTTPS.ENABLED)
         }
         
         global.log.info("BAGARINO HTTPS server listening on port %d in %s mode [worker is %s]",
-                        HTTPS_PORT,
+                        CONF.HTTPS_PORT,
                         app.settings.env,
                         cluster.worker.id);
     });
@@ -121,7 +128,7 @@ if (SERVER_TYPE.HTTPS.ENABLED)
 
 
 /*
- * PROCESS HANDLING
+ * PROCESS SIGTERM HANDLING
  */
 
 // Gracefully handle SIGTERM

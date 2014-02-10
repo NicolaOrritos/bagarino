@@ -1,14 +1,19 @@
 {
-  "name": "bagarino",
-  "version": "0.5.6",
-  "private": false,
-  "dependencies": {
-    "express": "",
-    "redis": "",
-    "node_hash": "",
-    "hiredis": "",
-    "log": "",
-    "daemon": ""
-  },
-  "bin": "bin/start-bagarino-daemon"
+    "name": "bagarino",
+    "version": "0.6.0",
+    "private": false,
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/NicolaOrritos/bagarino"
+    },
+    "dependencies": {
+        "express": "",
+        "redis": "",
+        "node_hash": "",
+        "hiredis": "",
+        "log": "",
+        "sjl": "",
+        "daemon": ""
+    },
+    "bin": "bin/start-bagarino-daemon"
 }
