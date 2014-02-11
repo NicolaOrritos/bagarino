@@ -15,6 +15,15 @@ var fs = require('fs');
 console.log("Starting bagarino daemon...");
 
 
+// Load and apply some bare-bones config:
+var sjl = require("sjl");
+
+var defaults = {"ENVIRONMENT": "production"};
+var CONF = sjl("/etc/bagarino.conf", defaults);
+
+process.env["NODE_ENV"] = CONF.ENVIRONMENT;
+
+
 // Number of CPUs
 var cpus = require("os").cpus().length;
 

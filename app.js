@@ -20,6 +20,8 @@ var Log     = require("log");
 
 
 var defaults = {
+    "ENVIRONMENT": "production",
+    
     "PORT": 8124,
     "HTTPS_PORT": 8443,
 
@@ -32,6 +34,11 @@ var defaults = {
         "HTTP": {
             "ENABLED": false
         }
+    },
+    
+    "LOGGING": {
+        "ENABLED": true,
+        "PATH": "/var/log"
     }
 };
 
@@ -60,7 +67,7 @@ app.configure('production', function()
 {
     app.use(express.errorHandler());
     
-    global.log = new Log("info", fs.createWriteStream("/var/log/bagarino_w" + cluster.worker.id + ".log"));
+    global.log = new Log("info", fs.createWriteStream(CONF.LOGGING.PATH + "/bagarino_w" + cluster.worker.id + ".log"));
 });
 
 
