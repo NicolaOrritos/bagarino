@@ -18,7 +18,7 @@ console.log("Starting bagarino daemon...");
 // Load and apply some bare-bones config:
 var sjl = require("sjl");
 
-var defaults = {"ENVIRONMENT": "production"};
+var defaults = {"ENVIRONMENT": "development"};
 var CONF = sjl("/etc/bagarino.conf", defaults);
 
 process.env["NODE_ENV"] = CONF.ENVIRONMENT;
@@ -29,14 +29,21 @@ var cpus = require("os").cpus().length;
 
 function workerExitRoutine(code, signal)
 {
-    console.log("Worker '%s' died with signal '%s' :(", cluster.worker.id, signal);
-    console.log("Restarting it...");
-    
-    
-    // Replace the dead worker, we're not sentimental
-    var worker = cluster.fork();
-    
-    worker.on("exit", workerExitRoutine);
+    if (signal && signal !== 'SIGTERM')
+    {
+        console.log("Worker '%s' died with signal '%s' :(", this.id, signal);
+        console.log("Restarting it...");
+
+
+        // Replace the dead worker, we're not sentimental
+        var worker = cluster.fork();
+        
+        worker.on("exit", workerExitRoutine);
+    }
+    else
+    {
+        console.log("Worker '%s' gracefully shut down with code '%d' :)", this.id, code);
+    }
 }
 
 /**
@@ -61,13 +68,11 @@ function createWorkers(count)
         });
         
         
-        var workers = new Array();
-        
         while (count-- > 0)
         {
-            workers[count] = cluster.fork();
+            console.log("Creating worker #%d...", count);
             
-            workers[count].on("exit", workerExitRoutine);
+            cluster.fork().on("exit", workerExitRoutine);
         }
     }
     else
@@ -79,8 +84,6 @@ function createWorkers(count)
 
 /**
  * Kills all workers with the given signal.
- * Also removes all event listeners from workers before sending the signal
- * to prevent respawning.
  * @param  {Number} signal
  */
 function killAllWorkers(signal)
@@ -94,8 +97,7 @@ function killAllWorkers(signal)
         {
             worker = cluster.workers[uniqueID];
             
-            worker.removeAllListeners();
-            worker.process.kill(signal);
+            worker.kill(signal);
         }
     }
 }
