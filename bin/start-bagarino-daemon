@@ -29,9 +29,9 @@ var cpus = require("os").cpus().length;
 
 function workerExitRoutine(code, signal)
 {
-    if (signal && signal !== 'SIGTERM')
+    if (code !== 0 || (signal && signal !== 'SIGTERM'))
     {
-        console.log("Worker '%s' died with signal '%s' :(", this.id, signal);
+        console.log("Worker '%s' died with code '%d' and signal '%s' :(", this.id, code, signal);
         console.log("Restarting it...");
 
 
