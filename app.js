@@ -90,9 +90,11 @@ app.get('/contexts/:context/expireall', routes.contexts.expireall);
 /*
  * START ALL
  */
+var server;
+
 if (CONF.SERVER_TYPE.HTTP.ENABLED)
 {
-    http.createServer(app).listen(CONF.PORT, function()
+    server = http.createServer(app).listen(CONF.PORT, function()
     {
         // Drop privileges if we are running as root
         if (process.getgid() === 0)
@@ -115,7 +117,7 @@ if (CONF.SERVER_TYPE.HTTPS.ENABLED)
     
     var credentials = {key: privateKey, cert: certificate};
     
-    https.createServer(credentials, app).listen(CONF.HTTPS_PORT, function()
+    server = https.createServer(credentials, app).listen(CONF.HTTPS_PORT, function()
     {
         // Drop privileges if we are running as root
         if (process.getgid() === 0)
@@ -139,16 +141,10 @@ if (CONF.SERVER_TYPE.HTTPS.ENABLED)
 // Gracefully handle SIGTERM
 process.on("SIGTERM", function()
 {
-    console.log("Received SIGTERM");
-    
-    if (app)
+    if (server)
     {
-        console.log("Received SIGTERM");
-        
-        app.close(function()
+        server.close(function()
         {
-            console.log("Received SIGTERM");
-            
             // Disconnect from cluster master
             if (process.disconnect)
             {
