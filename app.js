@@ -5,20 +5,24 @@
 /*
  * REQUIRES
  */
-var fs      = require("fs");
-var http    = require("http");
-var https   = require("https");
-var cluster = require("cluster");
-var express = require("express");
-var sjl     = require("sjl");
-var Log     = require("log");
+var fs             = require("fs");
+var http           = require("http");
+var https          = require("https");
+var cluster        = require("cluster");
+var express        = require("express");
+var favicon        = require('static-favicon');
+var errorHandler   = require('errorhandler');
+var morgan         = require('morgan');
+var bodyParser     = require('body-parser');
+var methodOverride = require('method-override');
+var path           = require('path');
+var sjl            = require("sjl");
+var Log            = require("log");
 
 
 /*
- * CONFIGURATION
+ * DEFAULT CONFIGURATION
  */
-
-
 var defaults = {
     "ENVIRONMENT": "production",
     
@@ -45,43 +49,41 @@ var defaults = {
 var CONF = sjl("/etc/bagarino.conf", defaults);
 
 
+/*
+ * EXPRESS INITIALIZATION
+ */
 var app = express();
 
-app.configure(function()
-{
-    app.use(express.bodyParser());
-    app.use(express.methodOverride());
-    app.use(app.router);
-});
+app.set('port', CONF.PORT);
+app.use(favicon());
+app.use(morgan('dev'));
+app.use(bodyParser());
+app.use(methodOverride());
 
-app.configure('development', function()
+if ('development' === app.get('env'))
 {
-    app.use(express.errorHandler({ dumpExceptions: true, showStack: true }));
     app.locals.pretty = true;
     
     // Let logs go to stdout
     global.log = new Log("debug");
-});
-
-app.configure('production', function()
+}
+else
 {
-    app.use(express.errorHandler());
-    
     global.log = new Log("info", fs.createWriteStream(CONF.LOGGING.PATH + "/bagarino_w" + cluster.worker.id + ".log"));
-});
+}
 
 
 /*
  * ROUTES BINDING
  */
 var routes = {
-    'tickets' :   require('./routes/tickets') ,
+    'tickets' :   require('./routes/tickets'),
     'contexts':   require('./routes/contexts')
 };
 
-app.get('/tickets/new', routes.tickets.new);
-app.get('/tickets/:ticket/status', routes.tickets.status);
-app.get('/tickets/:ticket/expire', routes.tickets.expire);
+app.get('/tickets/new',                 routes.tickets.new);
+app.get('/tickets/:ticket/status',      routes.tickets.status);
+app.get('/tickets/:ticket/expire',      routes.tickets.expire);
 app.get('/contexts/:context/expireall', routes.contexts.expireall);
 
 
@@ -137,10 +139,16 @@ if (CONF.SERVER_TYPE.HTTPS.ENABLED)
 // Gracefully handle SIGTERM
 process.on("SIGTERM", function()
 {
+    console.log("Received SIGTERM");
+    
     if (app)
     {
+        console.log("Received SIGTERM");
+        
         app.close(function()
         {
+            console.log("Received SIGTERM");
+            
             // Disconnect from cluster master
             if (process.disconnect)
             {

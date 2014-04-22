@@ -13,7 +13,12 @@
         "hiredis": "",
         "log": "",
         "sjl": "",
-        "daemon": ""
+        "daemon": "",
+        "static-favicon": "",
+        "method-override": "",
+        "morgan": "",
+        "body-parser": "",
+        "errorhandler": ""
     },
     "bin": "bin/start-bagarino-daemon"
 }
