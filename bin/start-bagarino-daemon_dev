@@ -5,8 +5,8 @@
  */
 
 
-// Everything above this line will be executed twice
-require("daemon")();
+// We don't fork, hence we simulate the daemon without the daemon :)
+// require("daemon")();
 
 
 var cluster = require("cluster");
@@ -59,7 +59,7 @@ function createWorkers(count)
         // Write the PID file:
         var pid = process.pid.toString();
         
-        fs.writeFile("/var/run/bagarino.pid", pid, function(err)
+        fs.writeFile("./logs/bagarino.pid", pid, function(err)
         {
             if (err)
             {

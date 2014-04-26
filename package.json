@@ -1,11 +1,15 @@
 {
     "name": "bagarino",
-    "version": "1.2.0",
+    "version": "1.2.2",
     "private": false,
+    
     "repository": {
         "type": "git",
         "url": "git://github.com/NicolaOrritos/bagarino"
     },
+    
+    "bin": "bin/start-bagarino-daemon",
+    
     "dependencies": {
         "express": "",
         "redis": "",
@@ -20,5 +24,16 @@
         "body-parser": "",
         "errorhandler": ""
     },
-    "bin": "bin/start-bagarino-daemon"
+    
+    "devDependencies": {
+        "grunt": "~0.4.1",
+        "grunt-develop": "~0.2.2",
+        "grunt-contrib-watch": "~0.5.3",
+        "grunt-contrib-jshint": "~0.7.0",
+        "grunt-contrib-nodeunit": "~0.2.0",
+        "jshint-stylish": "^0.1.5",
+        "request": "~2.27.0",
+        "time-grunt": "~0.1.1",
+        "load-grunt-tasks": "~0.2.0"
+    }
 }

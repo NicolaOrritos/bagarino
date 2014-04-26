@@ -11,11 +11,9 @@ var https          = require("https");
 var cluster        = require("cluster");
 var express        = require("express");
 var favicon        = require('static-favicon');
-var errorHandler   = require('errorhandler');
 var morgan         = require('morgan');
 var bodyParser     = require('body-parser');
 var methodOverride = require('method-override');
-var path           = require('path');
 var sjl            = require("sjl");
 var Log            = require("log");
 
