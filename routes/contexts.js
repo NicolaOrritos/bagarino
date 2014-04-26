@@ -16,7 +16,7 @@ var CONTEXTS_PREFIX       = "contexts:";
 var VALID_TICKET_PREFIX   = "VALID:";
 var EXPIRED_TICKET_PREFIX = "EXPIRED:";
 
-var VALID_TICKET = "VALID";
+// var VALID_TICKET = "VALID";
 var EXPIRED_TICKET = "EXPIRED";
 
 
@@ -77,6 +77,8 @@ function removeTicket(context, ticket, metacallback)
 
 exports.expireall = function(req, res)
 {
+    var reply = {"status": "ERROR", "cause": "unknown"};
+    
     var context = req.param("context");
     
     if (context)
@@ -87,38 +89,42 @@ exports.expireall = function(req, res)
         {
             client.lrange(context, "0", "-1", function(err, tickets)
             {
+                var processed    = 0;
+                var deletedCount = 0;
+
+                function metacallback(deleted)
+                {
+                    processed++;
+
+                    if (deleted)
+                    {
+                        deletedCount++;
+                    }
+
+                    console.log("Metacallback called. Processed: %s", processed);
+
+                    if (processed === tickets.length)
+                    {
+                        reply.status = "OK";
+                        reply.expired = deletedCount;
+
+                        res.send(reply);
+                    }
+                }
+                
+                
                 if (err)
                 {
                     console.log("Error when retrieving tickets for context '%s': %s", context, err);
                     
-                    var reply = {"status": "ERROR", "cause": err};
+                    reply.status = "ERROR";
+                    reply.cause = err;
+                    
                     res.status(500).send(reply);
                 }
                 else
                 {
                     console.log("Tickets found: %s", JSON.stringify(tickets));
-                    
-                    
-                    var processed    = 0;
-                    var deletedCount = 0;
-                    
-                    function metacallback(deleted)
-                    {
-                        processed++;
-                        
-                        if (deleted)
-                        {
-                            deletedCount++;
-                        }
-                        
-                        console.log("Metacallback called. Processed: %s", processed);
-                        
-                        if (processed == tickets.length)
-                        {
-                            var reply = {"status": "OK", "expired": deletedCount};
-                            res.send(reply);
-                        }
-                    }
                     
                     if (tickets.length > 0)
                     {
@@ -133,7 +139,8 @@ exports.expireall = function(req, res)
                     }
                     else
                     {
-                        var reply = {"status": "OK", "cause": "empty_context"};
+                        reply.status = "OK";
+                        reply.cause = "empty_context";
         
                         res.send(reply);
                     }
@@ -143,7 +150,8 @@ exports.expireall = function(req, res)
     }
     else
     {
-        var reply = {"status": "ERROR", "cause": "empty_request"};
+        reply.status = "ERROR";
+        reply.err = "empty_request";
         
         res.status(400).send(reply);
     }

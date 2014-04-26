@@ -84,7 +84,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
         }
         
         
-        if (query_string.policy == "requests_based")
+        if (query_string.policy === "requests_based")
         {
             policy.requests_based = true;
             
@@ -114,13 +114,13 @@ function calculateExpirationPolicy(query_string, save_ticket)
             
             save_ticket.call(this, policy);
         }
-        else if (query_string.policy == "manual_expiration")
+        else if (query_string.policy === "manual_expiration")
         {
             policy.manual_expiration = true;
             
             save_ticket.call(this, policy);
         }
-        else if (query_string.policy == "time_based")
+        else if (query_string.policy === "time_based")
         {
             policy.time_based = true;
             
@@ -145,7 +145,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             
             save_ticket.call(this, policy);
         }
-        else if (query_string.policy == "cascading")
+        else if (query_string.policy === "cascading")
         {
             policy.cascading = true;
             
@@ -186,7 +186,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 save_ticket.call(this, policy);
             }
         }
-        else if (query_string.policy == "bandwidth_based")
+        else if (query_string.policy === "bandwidth_based")
         {
             policy.bandwidth_based = true;
             
@@ -277,7 +277,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 
                 if (policy.requests_based)
                 {
-                    if (policy.expires_in == 0)
+                    if (policy.expires_in === 0)
                     {
                         var reply = {"status": EXPIRED_TICKET};
                         
@@ -552,7 +552,7 @@ exports.new = function(req, res)
                         
                         if (policy.time_based)
                         {
-                            if (count == 1)
+                            if (count === 1)
                             {
                                 // Early reply:
                                 var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in, "policy": "time_based"};
@@ -581,7 +581,7 @@ exports.new = function(req, res)
                         }
                         else if (policy.requests_based)
                         {
-                            if (count == 1)
+                            if (count === 1)
                             {
                                 // Early reply:
                                 var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in, "policy": "requests_based"};
@@ -609,7 +609,7 @@ exports.new = function(req, res)
                         }
                         else if (policy.manual_expiration)
                         {
-                            if (count == 1)
+                            if (count === 1)
                             {
                                 // Early reply:
                                 var reply = {"result": "OK", "ticket": ticket_base, "policy": "manual_expiration"};
@@ -633,7 +633,7 @@ exports.new = function(req, res)
                         }
                         else if (policy.cascading)
                         {
-                            if (count == 1)
+                            if (count === 1)
                             {
                                 // Early reply:
                                 var reply = {"result": "OK", "ticket": ticket_base, "depends_on": policy.depends_on, "policy": "cascading"};
@@ -661,7 +661,7 @@ exports.new = function(req, res)
                         }
                         else if (policy.bandwidth_based)
                         {
-                            if (count == 1)
+                            if (count === 1)
                             {
                                 // Early reply:
                                 var reply = {"result": "OK", "ticket": ticket_base, "policy": "bandwidth_based", "requests_per_minute": policy.expires_in};
@@ -690,7 +690,7 @@ exports.new = function(req, res)
                             // Return an error:
                             var reply = {"result": "NOT_OK", "cause": "wrong_policy"};
                             
-                            if (count == 1)
+                            if (count === 1)
                             {
                                 res.status(400).send(reply);
                             }
