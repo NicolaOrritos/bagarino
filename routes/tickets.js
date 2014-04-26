@@ -16,7 +16,7 @@ client.on("error", function (err)
 
 var REDIS_DB = 3;
 
-var NOT_VALID_TICKET = "NOT_VALID";
+// var NOT_VALID_TICKET = "NOT_VALID";
 
 var VALID_TICKET = "VALID";
 var VALID_PREFIX = "VALID:";
@@ -38,8 +38,7 @@ var MAX_TICKETS_PER_TIME = 200;
 // [todo] - Add bandwidth-based policy
 function calculateExpirationPolicy(query_string, save_ticket)
 {
-    if (save_ticket)
-    if (query_string)
+    if (save_ticket && query_string)
     {
         var policy = {
             // Policies available for tickets:
@@ -92,13 +91,13 @@ function calculateExpirationPolicy(query_string, save_ticket)
             {
                 var reqs = parseInt(query_string.requests);
                 
-                if (secs != NaN)
+                if (isNaN(reqs))
                 {
-                    policy.expires_in = reqs;
+                    policy.expires_in = DEFAULT_EXPIRES_IN_REQUESTS;
                 }
                 else
                 {
-                    policy.expires_in = DEFAULT_EXPIRES_IN_REQUESTS;
+                    policy.expires_in = reqs;
                 }
             }
             else
@@ -128,13 +127,13 @@ function calculateExpirationPolicy(query_string, save_ticket)
             {
                 var secs = parseInt(query_string.seconds);
                 
-                if (secs != NaN)
+                if (isNaN(secs))
                 {
-                    policy.expires_in = secs;
+                    policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
                 }
                 else
                 {
-                    policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
+                    policy.expires_in = secs;
                 }
             }
             else
@@ -192,15 +191,15 @@ function calculateExpirationPolicy(query_string, save_ticket)
             
             if (query_string.reqs_per_minute)
             {
-                var reqs = parseInt(query_string.reqs_per_minute);
+                var reqsPerMin = parseInt(query_string.reqs_per_minute);
                 
-                if (reqs != NaN)
+                if (isNaN(reqsPerMin))
                 {
-                    policy.expires_in = reqs;
+                    policy.expires_in = DEFAULT_REQUESTS_PER_MINUTE;
                 }
                 else
                 {
-                    policy.expires_in = DEFAULT_REQUESTS_PER_MINUTE;
+                    policy.expires_in = reqsPerMin;
                 }
             }
             else
@@ -256,11 +255,24 @@ function handleTimeBasedTicketResponse(ticket_base, res)
 {
     client.select(REDIS_DB, function()
     {
-        client.ttl(VALID_PREFIX + ticket_base, function(error, ttl)
+        client.ttl(VALID_PREFIX + ticket_base, function(err, ttl)
         {
-            var reply = {"status": VALID_TICKET, "expires_in": ttl, "policy": "time_based"};
+            var reply = {"status": "ERROR"};
             
-            res.send(reply);
+            if (err)
+            {
+                reply.cause = err;
+                
+                res.status(500).send(reply);
+            }
+            else
+            {
+                reply.status = VALID_TICKET;
+                reply.expires_in = ttl;
+                reply.policy = "time_based";
+                
+                res.send(reply);
+            }
         });
     });
 }
@@ -271,6 +283,8 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
     {
         client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
         {
+            var reply = {"status": "ERROR"};
+            
             if (policy_str)
             {
                 var policy = JSON.parse(policy_str);
@@ -279,7 +293,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 {
                     if (policy.expires_in === 0)
                     {
-                        var reply = {"status": EXPIRED_TICKET};
+                        reply.status = EXPIRED_TICKET;
                         
                         res.send(reply);
                         
@@ -291,10 +305,12 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                         
                         client.hset(VALID_PREFIX + ticket_base, "policy", JSON.stringify(policy));
                         
-                        var reply = {"status": VALID_TICKET, "expires_in": policy.expires_in, "policy": "requests_based"};
+                        reply.status = VALID_TICKET;
+                        reply.expires_in = policy.expires_in;
+                        reply.policy = "requests_based";
                         
-                        if (isAutorenewable(policy))
-                        if (policy.expires_in === 0 || policy.expires_in === "0")
+                        if (isAutorenewable(policy)
+                            && (policy.expires_in === 0 || policy.expires_in === "0"))
                         {
                             // Create a new ticket and serve it alongside the other info
                             var newTicket = createNewTicket();
@@ -312,7 +328,8 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                             client.set(expired_ticket, EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
                             
-                            reply = {"status": VALID_TICKET, "expires_in": 0, "policy": "requests_based", "next_ticket": newTicket};
+                            reply.expires_in = 0;
+                            reply.next_ticket = newTicket;
                         }
                         
                         
@@ -321,7 +338,8 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 }
                 else
                 {
-                    var reply = {"status": "ERROR", "cause": "different_policy"};
+                    reply.status = "ERROR";
+                    reply.cause  = "different_policy";
                                     
                     res.status(400).send(reply);
                 }
@@ -331,7 +349,14 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 // Malformed ticket in the DB: delete
                 client.del(VALID_PREFIX + ticket_base, function(err)
                 {
-                    var reply = {"status": "ERROR", "cause": "malformed_ticket"};
+                    if (err)
+                    {
+                        reply.cause = err;
+                    }
+                    else
+                    {
+                        reply.cause = "malformed_ticket";
+                    }
                         
                     res.status(500).send(reply);
                 });
@@ -365,26 +390,44 @@ function handleCascadingTicketResponse(ticket_base, res)
                     {
                         client.exists(VALID_PREFIX + dep_ticket, function(error, exists)
                         {
-                            if (exists)
+                            var reply = {"status": "ERROR"};
+                            
+                            if (error)
                             {
-                                var reply = {"status": VALID_TICKET, "policy": "cascading", "depends_on": dep_ticket};
+                                reply.cause = error;
+                                
+                                res.send(reply);
+                            }
+                            else if (exists)
+                            {
+                                reply.status = VALID_TICKET;
+                                reply.policy = "cascading";
+                                reply.depends_on = dep_ticket;
                                 
                                 res.send(reply);
                             }
                             else
                             {
-                                client.exists(EXPIRED_PREFIX + dep_ticket, function(error, expired)
+                                client.exists(EXPIRED_PREFIX + dep_ticket, function(error2, expired)
                                 {
-                                    /* The ticket this one depends on has expired
-                                     * since the last time we checked.
-                                     * We must mark this one as expired too. */
-                                    
-                                    // Early reply
-                                    var reply = {"status": EXPIRED_TICKET};
-                                    
-                                    res.send(reply);
-                                    
-                                    client.del(VALID_PREFIX + ticket_base);
+                                    if (error2)
+                                    {
+                                        reply.cause = error2;
+                                        res.status(500).send(reply);
+                                    }
+                                    else
+                                    {
+                                        /* The ticket this one depends on has expired
+                                         * since the last time we checked.
+                                         * We must mark this one as expired too. */
+
+                                        // Early reply
+                                        reply.status = EXPIRED_TICKET;
+
+                                        res.send(reply);
+
+                                        client.del(VALID_PREFIX + ticket_base);
+                                    }
                                 });
                             }
                         });
@@ -490,8 +533,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
 
 function addToContextMap(context, ticket)
 {
-    if (context)
-    if (ticket)
+    if (context && ticket)
     {
         context = CONTEXTS_PREFIX + context;
         
@@ -536,7 +578,7 @@ exports.new = function(req, res)
                 }
                 else
                 {
-                    var tickets = new Array();
+                    var tickets = [];
                     
                     var reply = {"result": "OK",
                         "tickets": undefined,
@@ -704,7 +746,7 @@ exports.new = function(req, res)
                     
                     if (count > 1)
                     {
-                        if (reply.status != "NOT_OK")
+                        if (reply.status !== "NOT_OK")
                         {
                             reply.tickets = tickets;
                         }
@@ -752,8 +794,8 @@ exports.status = function(req, res)
                             var can_go_on = true;
                             
                             // If the tickets was created with a context check it:
-                            if (policy.context)
-                            if (req.query.context != policy.context)
+                            if (policy.context
+                                && req.query.context !== policy.context)
                             {
                                 can_go_on = false;
                             }
