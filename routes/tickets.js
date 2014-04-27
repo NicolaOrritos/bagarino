@@ -408,7 +408,7 @@ function handleCascadingTicketResponse(ticket_base, res)
                             }
                             else
                             {
-                                client.exists(EXPIRED_PREFIX + dep_ticket, function(error2, expired)
+                                client.exists(EXPIRED_PREFIX + dep_ticket, function(error2)
                                 {
                                     if (error2)
                                     {
@@ -444,6 +444,8 @@ function handleBandwidthTicketResponse(ticket_base, res)
     {
         client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
         {
+            var reply = {"status": "ERROR"};
+            
             if (policy_str)
             {
                 var policy = JSON.parse(policy_str);
@@ -455,34 +457,24 @@ function handleBandwidthTicketResponse(ticket_base, res)
                     console.log("last_check: %s", last_check);
                     
                     var count = policy.checks_count;
-                    
                     var now = (new Date()).getTime();
-                    
-                    console.log("now: %s", now);
-                    
                     var timeDiff = now - last_check;
                     
                     console.log("diff (in seconds): %s", timeDiff / 1000);
                     
+                    
                     if ( last_check
                          && timeDiff < 60 * 1000 )
                     {
-                        if (count >= policy.expires_in)
+                        if (count < policy.expires_in)
                         {
-                            // Expired ticket
-                            var reply = {"status": EXPIRED_TICKET};
-                            
-                            res.send(reply);
+                            reply.status = VALID_TICKET;
+                            reply.expires_in = policy.expires_in - count;
+                            reply.policy = "bandwidth_based";
                         }
                         else
                         {
-                            var reply = {
-                                "status": VALID_TICKET,
-                                "expires_in": policy.expires_in - count,
-                                "policy": "bandwidth_based"
-                            };
-                            
-                            res.send(reply);
+                            reply.status = EXPIRED_TICKET;
                         }
                         
                         count++;
@@ -494,16 +486,14 @@ function handleBandwidthTicketResponse(ticket_base, res)
                         
                         count = 1;
                         
-                        var reply = {
-                            "status": VALID_TICKET,
-                            "expires_in": policy.expires_in - count,
-                            "policy": "bandwidth_based"
-                        };
-                        
-                        res.send(reply);
+                        reply.status = VALID_TICKET;
+                        reply.expires_in = policy.expires_in - count;
+                        reply.policy = "bandwidth_based";
                         
                         policy.last_check = now;
                     }
+                    
+                    res.send(reply);
                     
                     
                     policy.checks_count = count;
@@ -512,19 +502,21 @@ function handleBandwidthTicketResponse(ticket_base, res)
                 }
                 else
                 {
-                    var reply = {"status": "ERROR", "cause": "different_policy"};
+                    reply.cause = "different_policy";
                                     
                     res.status(400).send(reply);
                 }
             }
             else
             {
-                // Malformed ticket in the DB: delete
+                // Malformed ticket in the DB: early-reply and delete
+                reply.cause = "malformed_ticket";
+
+                res.status(500).send(reply);
+                
                 client.del(VALID_PREFIX + ticket_base, function(err)
                 {
-                    var reply = {"status": "ERROR", "cause": "malformed_ticket"};
-                        
-                    res.status(500).send(reply);
+                    console.log("Could not delete supposedly-malformed ticket '%s'. Cause: %s", ticket_base, err);
                 });
             }
         });
@@ -557,6 +549,8 @@ exports.new = function(req, res)
     {
         calculateExpirationPolicy(req.query, function(policy)
         {
+            var reply = {"result": "NOT_OK"};
+            
             if (policy)
             {
                 var count = 1;
@@ -568,11 +562,8 @@ exports.new = function(req, res)
                 
                 if (count > MAX_TICKETS_PER_TIME)
                 {
-                    var reply = {
-                        "result": "NOT_OK",
-                        "cause": "too_much_tickets",
-                        "message": "Try lowering your 'count' request to <" + MAX_TICKETS_PER_TIME
-                    };
+                    reply.cause = "too_much_tickets";
+                    reply.message = "Try lowering your 'count' request to <" + MAX_TICKETS_PER_TIME;
                     
                     res.status(400).send(reply);
                 }
@@ -580,11 +571,8 @@ exports.new = function(req, res)
                 {
                     var tickets = [];
                     
-                    var reply = {"result": "OK",
-                        "tickets": undefined,
-                        "expire_in": policy.expires_in,
-                        "policy": undefined
-                    };
+                    reply.result = "OK";
+                    reply.expires_in = policy.expires_in;
                     
                     for (var a=0; a<count; a++)
                     {
@@ -597,7 +585,9 @@ exports.new = function(req, res)
                             if (count === 1)
                             {
                                 // Early reply:
-                                var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in, "policy": "time_based"};
+                                reply.ticket = ticket_base;
+                                reply.policy = "time_based";
+                                
                                 res.send(reply);
                             }
                             else
@@ -626,7 +616,9 @@ exports.new = function(req, res)
                             if (count === 1)
                             {
                                 // Early reply:
-                                var reply = {"result": "OK", "ticket": ticket_base, "expires_in": policy.expires_in, "policy": "requests_based"};
+                                reply.ticket = ticket_base;
+                                reply.policy = "requests_based";
+                                
                                 res.send(reply);
                             }
                             else
@@ -654,7 +646,9 @@ exports.new = function(req, res)
                             if (count === 1)
                             {
                                 // Early reply:
-                                var reply = {"result": "OK", "ticket": ticket_base, "policy": "manual_expiration"};
+                                reply.ticket = ticket_base;
+                                reply.policy = "manual_expiration";
+                                
                                 res.send(reply);
                             }
                             else
@@ -678,7 +672,10 @@ exports.new = function(req, res)
                             if (count === 1)
                             {
                                 // Early reply:
-                                var reply = {"result": "OK", "ticket": ticket_base, "depends_on": policy.depends_on, "policy": "cascading"};
+                                reply.ticket = ticket_base;
+                                reply.depends_on = policy.depends_on;
+                                reply.policy = "cascading";
+                                
                                 res.send(reply);
                             }
                             else
@@ -706,7 +703,10 @@ exports.new = function(req, res)
                             if (count === 1)
                             {
                                 // Early reply:
-                                var reply = {"result": "OK", "ticket": ticket_base, "policy": "bandwidth_based", "requests_per_minute": policy.expires_in};
+                                reply.ticket = ticket_base;
+                                reply.policy = "bandwidth_based";
+                                reply.requests_per_minute = policy.expires_in;
+                                
                                 res.send(reply);
                             }
                             else
@@ -730,7 +730,9 @@ exports.new = function(req, res)
                         else
                         {
                             // Return an error:
-                            var reply = {"result": "NOT_OK", "cause": "wrong_policy"};
+                            delete reply.expires_in;
+                            reply.result = "NOT_OK";
+                            reply.cause = "wrong_policy";
                             
                             if (count === 1)
                             {
@@ -758,7 +760,7 @@ exports.new = function(req, res)
             else
             {
                 // Return an error:
-                var reply = {"result": "NOT_OK", "cause": "wrong_policy"};
+                reply.cause = "wrong_policy";
                 
                 res.status(400).send(reply);
             }
@@ -770,6 +772,8 @@ exports.status = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
+        var reply = {"status": "ERROR"};
+        
         var ticket_base = req.param("ticket");
         
         if (ticket_base)
@@ -783,7 +787,7 @@ exports.status = function(req, res)
                 
                 if (exists)
                 {
-                    var policy_str = client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
+                    client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
                     {
                         if (policy_str)
                         {
@@ -830,19 +834,21 @@ exports.status = function(req, res)
                             }
                             else
                             {
-                                var reply = {"status": "ERROR", "cause": "not_found"};
+                                reply.cause = "not_found";
                                 
                                 res.status(404).send(reply);
                             }
                         }
                         else
                         {
-                            // Malformed ticket in the DB: delete
+                            // Malformed ticket in the DB: early-reply and delete
+                            reply.cause = "malformed_ticket";
+
+                            res.status(500).send(reply);
+                            
                             client.del(VALID_PREFIX + ticket_base, function(err)
                             {
-                                var reply = {"status": "ERROR", "cause": "malformed_ticket"};
-                                    
-                                res.status(500).send(reply);
+                                console.log("Could not delete supposedly-malformed ticket '%s'. Cause: %s", ticket_base, err);
                             });
                         }
                     });
@@ -857,13 +863,13 @@ exports.status = function(req, res)
                         
                         if (expired)
                         {
-                            var reply = {"status": EXPIRED_TICKET};
+                            reply.status = EXPIRED_TICKET;
                             
                             res.send(reply);
                         }
                         else
                         {
-                            var reply = {"status": "ERROR", "cause": "not_found"};
+                            reply.cause = "not_found";
                             
                             res.status(404).send(reply);
                         }
@@ -873,11 +879,10 @@ exports.status = function(req, res)
         }
         else
         {
-            var reply = {"status": "ERROR", "cause": "empty_request"};
+            reply.cause = "empty_request";
             
             res.status(400).send(reply);
         }
-        
     });
 };
 
@@ -885,6 +890,8 @@ exports.expire = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
+        var reply = {"status": "ERROR"};
+        
         var ticket_base = req.param("ticket");
         
         if (ticket_base)
@@ -902,7 +909,7 @@ exports.expire = function(req, res)
                             if (policy.manual_expiration === true
                                 || policy.can_force_expiration === true)
                             {
-                                var reply = {"status": EXPIRED_TICKET};
+                                reply.status = EXPIRED_TICKET;
                                     
                                 res.send(reply);
                                 
@@ -915,19 +922,21 @@ exports.expire = function(req, res)
                             }
                             else
                             {
-                                var reply = {"status": "ERROR", "cause": "different_policy"};
+                                reply.cause = "different_policy";
                                     
                                 res.status(400).send(reply);
                             }
                         }
                         else
                         {
-                            // Malformed ticket in the DB: delete
+                            // Malformed ticket in the DB: early-reply and delete
+                            reply.cause = "malformed_ticket";
+
+                            res.status(500).send(reply);
+                            
                             client.del(VALID_PREFIX + ticket_base, function(err)
                             {
-                                var reply = {"status": "ERROR", "cause": "malformed_ticket"};
-                                    
-                                res.status(500).send(reply);
+                                console.log("Could not delete supposedly-malformed ticket '%s'. Cause: %s", ticket_base, err);
                             });
                         }
                     });
@@ -942,13 +951,13 @@ exports.expire = function(req, res)
                         
                         if (expired)
                         {
-                            var reply = {"status": "ERROR", "cause": "ticket_already_expired"};
+                            reply.cause = "ticket_already_expired";
                             
                             res.status(400).send(reply);
                         }
                         else
                         {
-                            var reply = {"status": "ERROR", "cause": "not_found"};
+                            reply.cause = "not_found";
                             
                             res.status(404).send(reply);
                         }
@@ -958,7 +967,7 @@ exports.expire = function(req, res)
         }
         else
         {
-            var reply = {"status": "ERROR", "cause": "empty_request"};
+            reply.cause = "empty_request";
             
             res.status(400).send(reply);
         }
