@@ -1,6 +1,7 @@
 'use strict';
 
 var request = require('request');
+var CONST   = require('../lib/const');
 
 /*
   ======== A Handy Little Nodeunit Reference ========
@@ -32,7 +33,7 @@ exports.read =
     },
     'Contexts route': function(test)
     {
-        test.expect(2);
+        test.expect(4);
         
         var context = "nonexistentcontext";
         
@@ -43,6 +44,12 @@ exports.read =
             test.ifError(err);
             
             test.equal(res.statusCode, 200);
+            
+            var result = JSON.parse(res.body);
+            
+            test.equal(result.status, CONST.OK);
+            test.equal(result.cause, "empty_context");
+            
             
             test.done();
         });

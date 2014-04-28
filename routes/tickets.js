@@ -4,8 +4,9 @@
 // [todo] - Add new docs for can_force_expiration switch
 // [todo] - What happens to a requests-based 10-requests-long ticket expired counterpart after DEFAULT_REMEMBER_UNTIL if I didn't ask for it never once?
 
-var hash = require('node_hash');
-var redis = require("redis");
+var hash  = require('node_hash');
+var redis = require('redis');
+var CONST = require('../lib/const');
 
 var client = redis.createClient();
 
@@ -15,24 +16,6 @@ client.on("error", function (err)
 });
 
 var REDIS_DB = 3;
-
-var ERROR = "ERROR";
-
-var VALID_TICKET = "VALID";
-var VALID_PREFIX = "VALID:";
-
-var EXPIRED_TICKET = "EXPIRED";
-var EXPIRED_PREFIX = "EXPIRED:";
-
-var CONTEXTS_PREFIX = "contexts:";
-
-var DEFAULT_EXPIRES_IN_SECONDS  = 60;
-var DEFAULT_EXPIRES_IN_REQUESTS = 100;
-var DEFAULT_REQUESTS_PER_MINUTE = 60;
-
-var DEFAULT_REMEMBER_UNTIL = 60 * 60 * 24 * 10;  // Ten days
-
-var MAX_TICKETS_PER_TIME = 200;
 
 
 // [todo] - Add bandwidth-based policy
@@ -62,7 +45,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             
             // Number of seconds/requests until this ticket expires
             expires_in: undefined,
-            remember_until: DEFAULT_REMEMBER_UNTIL
+            remember_until: CONST.DEFAULT_REMEMBER_UNTIL
         };
         
         
@@ -93,7 +76,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 
                 if (isNaN(reqs))
                 {
-                    policy.expires_in = DEFAULT_EXPIRES_IN_REQUESTS;
+                    policy.expires_in = CONST.DEFAULT_EXPIRES_IN_REQUESTS;
                 }
                 else
                 {
@@ -102,7 +85,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             }
             else
             {
-                policy.expires_in = DEFAULT_EXPIRES_IN_REQUESTS;
+                policy.expires_in = CONST.DEFAULT_EXPIRES_IN_REQUESTS;
             }
             
             if (policy.autorenew)
@@ -129,7 +112,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 
                 if (isNaN(secs))
                 {
-                    policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
+                    policy.expires_in = CONST.DEFAULT_EXPIRES_IN_SECONDS;
                 }
                 else
                 {
@@ -138,7 +121,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             }
             else
             {
-                policy.expires_in = DEFAULT_EXPIRES_IN_SECONDS;
+                policy.expires_in = CONST.DEFAULT_EXPIRES_IN_SECONDS;
             }
             
             
@@ -156,7 +139,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             {
                 client.select(REDIS_DB, function()
                 {
-                    client.exists(VALID_PREFIX + dep_ticket, function(error, exists)
+                    client.exists(CONST.VALID_PREFIX + dep_ticket, function(error, exists)
                     {
                         if(exists)
                         {
@@ -195,7 +178,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 
                 if (isNaN(reqsPerMin))
                 {
-                    policy.expires_in = DEFAULT_REQUESTS_PER_MINUTE;
+                    policy.expires_in = CONST.DEFAULT_REQUESTS_PER_MINUTE;
                 }
                 else
                 {
@@ -204,7 +187,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             }
             else
             {
-                policy.expires_in = DEFAULT_REQUESTS_PER_MINUTE;
+                policy.expires_in = CONST.DEFAULT_REQUESTS_PER_MINUTE;
             }
             
             
@@ -255,9 +238,9 @@ function handleTimeBasedTicketResponse(ticket_base, res)
 {
     client.select(REDIS_DB, function()
     {
-        client.ttl(VALID_PREFIX + ticket_base, function(err, ttl)
+        client.ttl(CONST.VALID_PREFIX + ticket_base, function(err, ttl)
         {
-            var reply = {"status": ERROR};
+            var reply = {"status": CONST.ERROR};
             
             if (err)
             {
@@ -267,7 +250,7 @@ function handleTimeBasedTicketResponse(ticket_base, res)
             }
             else
             {
-                reply.status = VALID_TICKET;
+                reply.status = CONST.VALID_TICKET;
                 reply.expires_in = ttl;
                 reply.policy = "time_based";
                 
@@ -281,9 +264,9 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
 {
     client.select(REDIS_DB, function()
     {
-        client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
+        client.hget(CONST.VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
         {
-            var reply = {"status": ERROR};
+            var reply = {"status": CONST.ERROR};
             
             if (policy_str)
             {
@@ -293,19 +276,19 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 {
                     if (policy.expires_in === 0)
                     {
-                        reply.status = EXPIRED_TICKET;
+                        reply.status = CONST.EXPIRED_TICKET;
                         
                         res.send(reply);
                         
-                        client.del(VALID_PREFIX + ticket_base);
+                        client.del(CONST.VALID_PREFIX + ticket_base);
                     }
                     else
                     {
                         policy.expires_in -= 1;
                         
-                        client.hset(VALID_PREFIX + ticket_base, "policy", JSON.stringify(policy));
+                        client.hset(CONST.VALID_PREFIX + ticket_base, "policy", JSON.stringify(policy));
                         
-                        reply.status = VALID_TICKET;
+                        reply.status = CONST.VALID_TICKET;
                         reply.expires_in = policy.expires_in;
                         reply.policy = "requests_based";
                         
@@ -314,18 +297,18 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                         {
                             // Create a new ticket and serve it alongside the other info
                             var newTicket = createNewTicket();
-                            var valid_ticket   = VALID_PREFIX   + newTicket;
-                            var expired_ticket = EXPIRED_PREFIX + newTicket;
+                            var valid_ticket   = CONST.VALID_PREFIX   + newTicket;
+                            var expired_ticket = CONST.EXPIRED_PREFIX + newTicket;
                             
                             var newPolicy = policy;
                             newPolicy.expires_in = newPolicy.original_expires_in = policy.original_expires_in;
                             
                             // First save the "next" ticket:
-                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(newPolicy));
                             
                             // Then save its "to-be-expired" counterpart:
-                            client.set(expired_ticket, EXPIRED_TICKET);
+                            client.set(expired_ticket, CONST.EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
                             
                             reply.expires_in = 0;
@@ -338,7 +321,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 }
                 else
                 {
-                    reply.status = ERROR;
+                    reply.status = CONST.ERROR;
                     reply.cause  = "different_policy";
                                     
                     res.status(400).send(reply);
@@ -347,7 +330,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
             else
             {
                 // Malformed ticket in the DB: delete
-                client.del(VALID_PREFIX + ticket_base, function(err)
+                client.del(CONST.VALID_PREFIX + ticket_base, function(err)
                 {
                     if (err)
                     {
@@ -367,7 +350,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
 
 function handleManualTicketResponse(ticket_base, res)
 {
-    var reply = {"status": VALID_TICKET, "policy": "manual_expiration"};
+    var reply = {"status": CONST.VALID_TICKET, "policy": "manual_expiration"};
         
     res.send(reply);
 }
@@ -376,7 +359,7 @@ function handleCascadingTicketResponse(ticket_base, res)
 {
     client.select(REDIS_DB, function()
     {
-        client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
+        client.hget(CONST.VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
         {
             if (policy_str)
             {
@@ -388,9 +371,9 @@ function handleCascadingTicketResponse(ticket_base, res)
                     
                     if (dep_ticket)
                     {
-                        client.exists(VALID_PREFIX + dep_ticket, function(error, exists)
+                        client.exists(CONST.VALID_PREFIX + dep_ticket, function(error, exists)
                         {
-                            var reply = {"status": ERROR};
+                            var reply = {"status": CONST.ERROR};
                             
                             if (error)
                             {
@@ -400,7 +383,7 @@ function handleCascadingTicketResponse(ticket_base, res)
                             }
                             else if (exists)
                             {
-                                reply.status = VALID_TICKET;
+                                reply.status = CONST.VALID_TICKET;
                                 reply.policy = "cascading";
                                 reply.depends_on = dep_ticket;
                                 
@@ -408,7 +391,7 @@ function handleCascadingTicketResponse(ticket_base, res)
                             }
                             else
                             {
-                                client.exists(EXPIRED_PREFIX + dep_ticket, function(error2)
+                                client.exists(CONST.EXPIRED_PREFIX + dep_ticket, function(error2)
                                 {
                                     if (error2)
                                     {
@@ -422,11 +405,11 @@ function handleCascadingTicketResponse(ticket_base, res)
                                          * We must mark this one as expired too. */
 
                                         // Early reply
-                                        reply.status = EXPIRED_TICKET;
+                                        reply.status = CONST.EXPIRED_TICKET;
 
                                         res.send(reply);
 
-                                        client.del(VALID_PREFIX + ticket_base);
+                                        client.del(CONST.VALID_PREFIX + ticket_base);
                                     }
                                 });
                             }
@@ -442,9 +425,9 @@ function handleBandwidthTicketResponse(ticket_base, res)
 {
     client.select(REDIS_DB, function()
     {
-        client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
+        client.hget(CONST.VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
         {
-            var reply = {"status": ERROR};
+            var reply = {"status": CONST.ERROR};
             
             if (policy_str)
             {
@@ -468,13 +451,13 @@ function handleBandwidthTicketResponse(ticket_base, res)
                     {
                         if (count < policy.expires_in)
                         {
-                            reply.status = VALID_TICKET;
+                            reply.status = CONST.VALID_TICKET;
                             reply.expires_in = policy.expires_in - count;
                             reply.policy = "bandwidth_based";
                         }
                         else
                         {
-                            reply.status = EXPIRED_TICKET;
+                            reply.status = CONST.EXPIRED_TICKET;
                         }
                         
                         count++;
@@ -486,7 +469,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
                         
                         count = 1;
                         
-                        reply.status = VALID_TICKET;
+                        reply.status = CONST.VALID_TICKET;
                         reply.expires_in = policy.expires_in - count;
                         reply.policy = "bandwidth_based";
                         
@@ -498,7 +481,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
                     
                     policy.checks_count = count;
                     
-                    client.hset(VALID_PREFIX + ticket_base, "policy", JSON.stringify(policy));
+                    client.hset(CONST.VALID_PREFIX + ticket_base, "policy", JSON.stringify(policy));
                 }
                 else
                 {
@@ -514,7 +497,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
 
                 res.status(500).send(reply);
                 
-                client.del(VALID_PREFIX + ticket_base, function(err)
+                client.del(CONST.VALID_PREFIX + ticket_base, function(err)
                 {
                     console.log("Could not delete supposedly-malformed ticket '%s'. Cause: %s", ticket_base, err);
                 });
@@ -527,7 +510,7 @@ function addToContextMap(context, ticket)
 {
     if (context && ticket)
     {
-        context = CONTEXTS_PREFIX + context;
+        context = CONST.CONTEXTS_PREFIX + context;
         
         client.select(REDIS_DB, function()
         {
@@ -549,7 +532,7 @@ exports.new = function(req, res)
     {
         calculateExpirationPolicy(req.query, function(policy)
         {
-            var reply = {"result": "NOT_OK"};
+            var reply = {"result": CONST.NOT_OK};
             
             if (policy)
             {
@@ -560,10 +543,10 @@ exports.new = function(req, res)
                     count = req.query.count;
                 }
                 
-                if (count > MAX_TICKETS_PER_TIME)
+                if (count > CONST.MAX_TICKETS_PER_TIME)
                 {
                     reply.cause = "too_much_tickets";
-                    reply.message = "Try lowering your 'count' request to <" + MAX_TICKETS_PER_TIME;
+                    reply.message = "Try lowering your 'count' request to <" + CONST.MAX_TICKETS_PER_TIME;
                     
                     res.status(400).send(reply);
                 }
@@ -571,14 +554,14 @@ exports.new = function(req, res)
                 {
                     var tickets = [];
                     
-                    reply.result = "OK";
+                    reply.result = CONST.OK;
                     reply.expires_in = policy.expires_in;
                     
                     for (var a=0; a<count; a++)
                     {
                         var ticket_base = createNewTicket();
-                        var valid_ticket   = VALID_PREFIX   + ticket_base;
-                        var expired_ticket = EXPIRED_PREFIX + ticket_base;
+                        var valid_ticket   = CONST.VALID_PREFIX   + ticket_base;
+                        var expired_ticket = CONST.EXPIRED_PREFIX + ticket_base;
                         
                         if (policy.time_based)
                         {
@@ -597,12 +580,12 @@ exports.new = function(req, res)
                             }
                             
                             // First save the "real" ticket:
-                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
                             client.expire(valid_ticket, policy.expires_in);
                             
                             // Then save the "to-be-expired" counterpart:
-                            client.set(expired_ticket, EXPIRED_TICKET);
+                            client.set(expired_ticket, CONST.EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
                             
                             
@@ -628,11 +611,11 @@ exports.new = function(req, res)
                             }
                             
                             // First save the "real" ticket:
-                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
                             
                             // Then save the "to-be-expired" counterpart:
-                            client.set(expired_ticket, EXPIRED_TICKET);
+                            client.set(expired_ticket, CONST.EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
                             
                             
@@ -658,7 +641,7 @@ exports.new = function(req, res)
                             }
                             
                             // Just save the ticket:
-                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
                             
                             
@@ -685,11 +668,11 @@ exports.new = function(req, res)
                             }
                             
                             // First save the "real" ticket:
-                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
                             
                             // Then save the "to-be-expired" counterpart:
-                            client.set(expired_ticket, EXPIRED_TICKET);
+                            client.set(expired_ticket, CONST.EXPIRED_TICKET);
                             client.expire(expired_ticket, policy.remember_until);
                             
                             
@@ -716,7 +699,7 @@ exports.new = function(req, res)
                             }
                             
                             // Save the ticket WITHOUT the last-check time:
-                            client.hset(valid_ticket, "content", VALID_TICKET);
+                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
                             client.hset(valid_ticket, "policy", JSON.stringify(policy));
                             
                             // No "to-be-expired" counterpart: bandwidth-based tickets never expire
@@ -731,7 +714,7 @@ exports.new = function(req, res)
                         {
                             // Return an error:
                             delete reply.expires_in;
-                            reply.result = "NOT_OK";
+                            reply.result = CONST.NOT_OK;
                             reply.cause = "wrong_policy";
                             
                             if (count === 1)
@@ -748,7 +731,7 @@ exports.new = function(req, res)
                     
                     if (count > 1)
                     {
-                        if (reply.status !== "NOT_OK")
+                        if (reply.status !== CONST.NOT_OK)
                         {
                             reply.tickets = tickets;
                         }
@@ -772,7 +755,7 @@ exports.status = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var reply = {"status": ERROR};
+        var reply = {"status": CONST.ERROR};
         
         var ticket_base = req.param("ticket");
         
@@ -780,14 +763,14 @@ exports.status = function(req, res)
         {
             global.log.debug("[tickets.status] asking status of ticket '%s'...'", ticket_base);
             
-            client.exists(VALID_PREFIX + ticket_base, function(error, exists)
+            client.exists(CONST.VALID_PREFIX + ticket_base, function(error, exists)
             {
                 global.log.debug("[tickets.status] exists returned: %s", exists);
                 global.log.debug("[tickets.status] error was: %s", error);
                 
                 if (exists)
                 {
-                    client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
+                    client.hget(CONST.VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
                     {
                         if (policy_str)
                         {
@@ -829,8 +812,8 @@ exports.status = function(req, res)
                                 
                                 
                                 // Additionally, refresh the expire counterpart of the ticket everytime we find a valid one [to avoid issue #8]
-                                client.set(EXPIRED_PREFIX + ticket_base, EXPIRED_TICKET);
-                                client.expire(EXPIRED_PREFIX + ticket_base, policy.remember_until);
+                                client.set(CONST.EXPIRED_PREFIX + ticket_base, CONST.EXPIRED_TICKET);
+                                client.expire(CONST.EXPIRED_PREFIX + ticket_base, policy.remember_until);
                             }
                             else
                             {
@@ -846,7 +829,7 @@ exports.status = function(req, res)
 
                             res.status(500).send(reply);
                             
-                            client.del(VALID_PREFIX + ticket_base, function(err)
+                            client.del(CONST.VALID_PREFIX + ticket_base, function(err)
                             {
                                 console.log("Could not delete supposedly-malformed ticket '%s'. Cause: %s", ticket_base, err);
                             });
@@ -856,14 +839,14 @@ exports.status = function(req, res)
                 else
                 {
                     // Check whether it expired:
-                    client.exists(EXPIRED_PREFIX + ticket_base, function(error, expired)
+                    client.exists(CONST.EXPIRED_PREFIX + ticket_base, function(error, expired)
                     {
                         global.log.debug("[tickets.status] expired returned: %s", expired);
                         global.log.debug("[tickets.status] error was: %s", error);
                         
                         if (expired)
                         {
-                            reply.status = EXPIRED_TICKET;
+                            reply.status = CONST.EXPIRED_TICKET;
                             
                             res.send(reply);
                         }
@@ -890,17 +873,17 @@ exports.expire = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var reply = {"status": ERROR};
+        var reply = {"status": CONST.ERROR};
         
         var ticket_base = req.param("ticket");
         
         if (ticket_base)
         {
-            client.exists(VALID_PREFIX + ticket_base, function(error, exists)
+            client.exists(CONST.VALID_PREFIX + ticket_base, function(error, exists)
             {
                 if (exists)
                 {
-                    client.hget(VALID_PREFIX + ticket_base, "policy", function(error, policy_str)
+                    client.hget(CONST.VALID_PREFIX + ticket_base, "policy", function(error, policy_str)
                     {
                         if (policy_str)
                         {
@@ -909,16 +892,16 @@ exports.expire = function(req, res)
                             if (policy.manual_expiration === true
                                 || policy.can_force_expiration === true)
                             {
-                                reply.status = EXPIRED_TICKET;
+                                reply.status = CONST.EXPIRED_TICKET;
                                     
                                 res.send(reply);
                                 
                                 // Save the "expired" counterpart when manually expiring:
-                                client.set(EXPIRED_PREFIX + ticket_base, EXPIRED_TICKET);
-                                client.expire(EXPIRED_PREFIX + ticket_base, policy.remember_until);
+                                client.set(CONST.EXPIRED_PREFIX + ticket_base, CONST.EXPIRED_TICKET);
+                                client.expire(CONST.EXPIRED_PREFIX + ticket_base, policy.remember_until);
                                 
                                 // Finally delete valid ticket
-                                client.del(VALID_PREFIX + ticket_base);
+                                client.del(CONST.VALID_PREFIX + ticket_base);
                             }
                             else
                             {
@@ -934,7 +917,7 @@ exports.expire = function(req, res)
 
                             res.status(500).send(reply);
                             
-                            client.del(VALID_PREFIX + ticket_base, function(err)
+                            client.del(CONST.VALID_PREFIX + ticket_base, function(err)
                             {
                                 console.log("Could not delete supposedly-malformed ticket '%s'. Cause: %s", ticket_base, err);
                             });
@@ -944,7 +927,7 @@ exports.expire = function(req, res)
                 else
                 {
                     // Check whether it expired:
-                    client.exists(EXPIRED_PREFIX + ticket_base, function(error, expired)
+                    client.exists(CONST.EXPIRED_PREFIX + ticket_base, function(error, expired)
                     {
                         global.log.debug("[tickets.expire] expired returned: %s", expired);
                         global.log.debug("[tickets.expire] error was: %s", error);

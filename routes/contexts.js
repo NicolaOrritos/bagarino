@@ -1,7 +1,8 @@
 
 // [todo] - Add documentation for contexts-based multi-ticket expiration
 
-var redis = require("redis");
+var redis = require('redis');
+var CONST = require('../lib/const');
 
 var client = redis.createClient();
 
@@ -12,11 +13,11 @@ client.on("error", function (err)
 
 var REDIS_DB = 3;
 
-var CONTEXTS_PREFIX       = "contexts:";
-var VALID_TICKET_PREFIX   = "VALID:";
-var EXPIRED_TICKET_PREFIX = "EXPIRED:";
 
-// var VALID_TICKET = "VALID";
+
+
+
+
 var EXPIRED_TICKET = "EXPIRED";
 
 
@@ -24,7 +25,7 @@ function removeTicket(context, ticket, metacallback)
 {
     if (ticket)
     {
-        client.hget(VALID_TICKET_PREFIX + ticket, "policy", function(error, policy_str)
+        client.hget(CONST.VALID_TICKET_PREFIX + ticket, "policy", function(error, policy_str)
         {
             if (policy_str)
             {
@@ -34,11 +35,11 @@ function removeTicket(context, ticket, metacallback)
                     || policy.can_force_expiration === true)
                 {
                     // Save the "expired" counterpart when manually expiring:
-                    client.set(EXPIRED_TICKET_PREFIX + ticket, EXPIRED_TICKET);
-                    client.expire(EXPIRED_TICKET_PREFIX + ticket, policy.remember_until);
+                    client.set(CONST.EXPIRED_TICKET_PREFIX + ticket, CONST.EXPIRED_TICKET);
+                    client.expire(CONST.EXPIRED_TICKET_PREFIX + ticket, policy.remember_until);
                     
                     // Finally delete valid ticket
-                    client.del(VALID_TICKET_PREFIX + ticket);
+                    client.del(CONST.VALID_TICKET_PREFIX + ticket);
                     
                     client.lrem(context, "1", ticket, function(err, removed)
                     {
@@ -66,7 +67,7 @@ function removeTicket(context, ticket, metacallback)
             else
             {
                 // Malformed ticket in the DB: delete
-                client.del(VALID_TICKET_PREFIX + ticket);
+                client.del(CONST.VALID_TICKET_PREFIX + ticket);
                 
                 metacallback(false);
             }
@@ -83,7 +84,7 @@ exports.expireall = function(req, res)
     
     if (context)
     {
-        context = CONTEXTS_PREFIX + context;
+        context = CONST.CONTEXTS_PREFIX + context;
         
         client.select(REDIS_DB, function()
         {
