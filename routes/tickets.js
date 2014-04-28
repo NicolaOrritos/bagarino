@@ -16,7 +16,7 @@ client.on("error", function (err)
 
 var REDIS_DB = 3;
 
-// var NOT_VALID_TICKET = "NOT_VALID";
+var ERROR = "ERROR";
 
 var VALID_TICKET = "VALID";
 var VALID_PREFIX = "VALID:";
@@ -48,7 +48,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             cascading: false,
             bandwidth_based: false,
             
-            // When the ticket has a cascading policy this one tracks the ticket this one depends on:
+            // When the ticket has a cascading policy this field tracks the one it depends on:
             depends_on: undefined,
             
             // Track an optional context for this ticket
@@ -257,7 +257,7 @@ function handleTimeBasedTicketResponse(ticket_base, res)
     {
         client.ttl(VALID_PREFIX + ticket_base, function(err, ttl)
         {
-            var reply = {"status": "ERROR"};
+            var reply = {"status": ERROR};
             
             if (err)
             {
@@ -283,7 +283,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
     {
         client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
         {
-            var reply = {"status": "ERROR"};
+            var reply = {"status": ERROR};
             
             if (policy_str)
             {
@@ -338,7 +338,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 }
                 else
                 {
-                    reply.status = "ERROR";
+                    reply.status = ERROR;
                     reply.cause  = "different_policy";
                                     
                     res.status(400).send(reply);
@@ -390,7 +390,7 @@ function handleCascadingTicketResponse(ticket_base, res)
                     {
                         client.exists(VALID_PREFIX + dep_ticket, function(error, exists)
                         {
-                            var reply = {"status": "ERROR"};
+                            var reply = {"status": ERROR};
                             
                             if (error)
                             {
@@ -444,7 +444,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
     {
         client.hget(VALID_PREFIX + ticket_base, "policy", function(err, policy_str)
         {
-            var reply = {"status": "ERROR"};
+            var reply = {"status": ERROR};
             
             if (policy_str)
             {
@@ -772,7 +772,7 @@ exports.status = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var reply = {"status": "ERROR"};
+        var reply = {"status": ERROR};
         
         var ticket_base = req.param("ticket");
         
@@ -890,7 +890,7 @@ exports.expire = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        var reply = {"status": "ERROR"};
+        var reply = {"status": ERROR};
         
         var ticket_base = req.param("ticket");
         
