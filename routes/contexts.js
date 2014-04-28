@@ -14,13 +14,6 @@ client.on("error", function (err)
 var REDIS_DB = 3;
 
 
-
-
-
-
-var EXPIRED_TICKET = "EXPIRED";
-
-
 function removeTicket(context, ticket, metacallback)
 {
     if (ticket)
@@ -78,7 +71,7 @@ function removeTicket(context, ticket, metacallback)
 
 exports.expireall = function(req, res)
 {
-    var reply = {"status": "ERROR", "cause": "unknown"};
+    var reply = {"status": CONST.ERROR, "cause": CONST.ERRORS.UNKNOWN};
     
     var context = req.param("context");
     
@@ -106,7 +99,7 @@ exports.expireall = function(req, res)
 
                     if (processed === tickets.length)
                     {
-                        reply.status = "OK";
+                        reply.status = CONST.OK;
                         reply.expired = deletedCount;
 
                         res.send(reply);
@@ -118,7 +111,7 @@ exports.expireall = function(req, res)
                 {
                     console.log("Error when retrieving tickets for context '%s': %s", context, err);
                     
-                    reply.status = "ERROR";
+                    reply.status = CONST.ERROR;
                     reply.cause = err;
                     
                     res.status(500).send(reply);
@@ -140,8 +133,8 @@ exports.expireall = function(req, res)
                     }
                     else
                     {
-                        reply.status = "OK";
-                        reply.cause = "empty_context";
+                        reply.status = CONST.OK;
+                        reply.cause = CONST.ERRORS.EMPTY_CONTEXT;
         
                         res.send(reply);
                     }
@@ -151,8 +144,8 @@ exports.expireall = function(req, res)
     }
     else
     {
-        reply.status = "ERROR";
-        reply.err = "empty_request";
+        reply.status = CONST.ERROR;
+        reply.err = CONST.ERRORS.EMPTY_REQUEST;
         
         res.status(400).send(reply);
     }

@@ -66,7 +66,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
         }
         
         
-        if (query_string.policy === "requests_based")
+        if (query_string.policy === CONST.POLICIES.REQUESTS_BASED)
         {
             policy.requests_based = true;
             
@@ -96,13 +96,13 @@ function calculateExpirationPolicy(query_string, save_ticket)
             
             save_ticket.call(this, policy);
         }
-        else if (query_string.policy === "manual_expiration")
+        else if (query_string.policy === CONST.POLICIES.MANUAL_EXPIRATION)
         {
             policy.manual_expiration = true;
             
             save_ticket.call(this, policy);
         }
-        else if (query_string.policy === "time_based")
+        else if (query_string.policy === CONST.POLICIES.TIME_BASED)
         {
             policy.time_based = true;
             
@@ -127,7 +127,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
             
             save_ticket.call(this, policy);
         }
-        else if (query_string.policy === "cascading")
+        else if (query_string.policy === CONST.POLICIES.CASCADING)
         {
             policy.cascading = true;
             
@@ -168,7 +168,7 @@ function calculateExpirationPolicy(query_string, save_ticket)
                 save_ticket.call(this, policy);
             }
         }
-        else if (query_string.policy === "bandwidth_based")
+        else if (query_string.policy === CONST.POLICIES.BANDWIDTH_BASED)
         {
             policy.bandwidth_based = true;
             
@@ -252,7 +252,7 @@ function handleTimeBasedTicketResponse(ticket_base, res)
             {
                 reply.status = CONST.VALID_TICKET;
                 reply.expires_in = ttl;
-                reply.policy = "time_based";
+                reply.policy = CONST.POLICIES.TIME_BASED;
                 
                 res.send(reply);
             }
@@ -290,7 +290,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                         
                         reply.status = CONST.VALID_TICKET;
                         reply.expires_in = policy.expires_in;
-                        reply.policy = "requests_based";
+                        reply.policy = CONST.POLICIES.REQUESTS_BASED;
                         
                         if (isAutorenewable(policy)
                             && (policy.expires_in === 0 || policy.expires_in === "0"))
@@ -322,7 +322,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                 else
                 {
                     reply.status = CONST.ERROR;
-                    reply.cause  = "different_policy";
+                    reply.cause  = CONST.ERRORS.DIFFERENT_POLICY;
                                     
                     res.status(400).send(reply);
                 }
@@ -338,7 +338,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
                     }
                     else
                     {
-                        reply.cause = "malformed_ticket";
+                        reply.cause = CONST.ERRORS.MALFORMED_TICKET;
                     }
                         
                     res.status(500).send(reply);
@@ -350,7 +350,7 @@ function handleRequestsBasedTicketResponse(ticket_base, res)
 
 function handleManualTicketResponse(ticket_base, res)
 {
-    var reply = {"status": CONST.VALID_TICKET, "policy": "manual_expiration"};
+    var reply = {"status": CONST.VALID_TICKET, "policy": CONST.POLICIES.MANUAL_EXPIRATION};
         
     res.send(reply);
 }
@@ -384,7 +384,7 @@ function handleCascadingTicketResponse(ticket_base, res)
                             else if (exists)
                             {
                                 reply.status = CONST.VALID_TICKET;
-                                reply.policy = "cascading";
+                                reply.policy = CONST.POLICIES.CASCADING;
                                 reply.depends_on = dep_ticket;
                                 
                                 res.send(reply);
@@ -453,7 +453,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
                         {
                             reply.status = CONST.VALID_TICKET;
                             reply.expires_in = policy.expires_in - count;
-                            reply.policy = "bandwidth_based";
+                            reply.policy = CONST.POLICIES.BANDWIDTH_BASED;
                         }
                         else
                         {
@@ -471,7 +471,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
                         
                         reply.status = CONST.VALID_TICKET;
                         reply.expires_in = policy.expires_in - count;
-                        reply.policy = "bandwidth_based";
+                        reply.policy = CONST.POLICIES.BANDWIDTH_BASED;
                         
                         policy.last_check = now;
                     }
@@ -485,7 +485,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
                 }
                 else
                 {
-                    reply.cause = "different_policy";
+                    reply.cause = CONST.ERRORS.DIFFERENT_POLICY;
                                     
                     res.status(400).send(reply);
                 }
@@ -493,7 +493,7 @@ function handleBandwidthTicketResponse(ticket_base, res)
             else
             {
                 // Malformed ticket in the DB: early-reply and delete
-                reply.cause = "malformed_ticket";
+                reply.cause = CONST.ERRORS.MALFORMED_TICKET;
 
                 res.status(500).send(reply);
                 
@@ -545,7 +545,7 @@ exports.new = function(req, res)
                 
                 if (count > CONST.MAX_TICKETS_PER_TIME)
                 {
-                    reply.cause = "too_much_tickets";
+                    reply.cause = CONST.ERRORS.TOO_MUCH_TICKETS;
                     reply.message = "Try lowering your 'count' request to <" + CONST.MAX_TICKETS_PER_TIME;
                     
                     res.status(400).send(reply);
@@ -569,13 +569,13 @@ exports.new = function(req, res)
                             {
                                 // Early reply:
                                 reply.ticket = ticket_base;
-                                reply.policy = "time_based";
+                                reply.policy = CONST.POLICIES.TIME_BASED;
                                 
                                 res.send(reply);
                             }
                             else
                             {
-                                reply.policy = "time_based";
+                                reply.policy = CONST.POLICIES.TIME_BASED;
                                 tickets[a] = ticket_base;
                             }
                             
@@ -600,13 +600,13 @@ exports.new = function(req, res)
                             {
                                 // Early reply:
                                 reply.ticket = ticket_base;
-                                reply.policy = "requests_based";
+                                reply.policy = CONST.POLICIES.REQUESTS_BASED;
                                 
                                 res.send(reply);
                             }
                             else
                             {
-                                reply.policy = "requests_based";
+                                reply.policy = CONST.POLICIES.REQUESTS_BASED;
                                 tickets[a] = ticket_base;
                             }
                             
@@ -630,13 +630,13 @@ exports.new = function(req, res)
                             {
                                 // Early reply:
                                 reply.ticket = ticket_base;
-                                reply.policy = "manual_expiration";
+                                reply.policy = CONST.POLICIES.MANUAL_EXPIRATION;
                                 
                                 res.send(reply);
                             }
                             else
                             {
-                                reply.policy = "manual_expiration";
+                                reply.policy = CONST.POLICIES.MANUAL_EXPIRATION;
                                 tickets[a] = ticket_base;
                             }
                             
@@ -657,13 +657,13 @@ exports.new = function(req, res)
                                 // Early reply:
                                 reply.ticket = ticket_base;
                                 reply.depends_on = policy.depends_on;
-                                reply.policy = "cascading";
+                                reply.policy = CONST.POLICIES.CASCADING;
                                 
                                 res.send(reply);
                             }
                             else
                             {
-                                reply.policy = "cascading";
+                                reply.policy = CONST.POLICIES.CASCADING;
                                 tickets[a] = ticket_base;
                             }
                             
@@ -687,14 +687,14 @@ exports.new = function(req, res)
                             {
                                 // Early reply:
                                 reply.ticket = ticket_base;
-                                reply.policy = "bandwidth_based";
+                                reply.policy = CONST.POLICIES.BANDWIDTH_BASED;
                                 reply.requests_per_minute = policy.expires_in;
                                 
                                 res.send(reply);
                             }
                             else
                             {
-                                reply.policy = "bandwidth_based";
+                                reply.policy = CONST.POLICIES.BANDWIDTH_BASED;
                                 tickets[a] = ticket_base;
                             }
                             
@@ -715,7 +715,7 @@ exports.new = function(req, res)
                             // Return an error:
                             delete reply.expires_in;
                             reply.result = CONST.NOT_OK;
-                            reply.cause = "wrong_policy";
+                            reply.cause = CONST.ERRORS.WRONG_POLICY;
                             
                             if (count === 1)
                             {
@@ -743,7 +743,7 @@ exports.new = function(req, res)
             else
             {
                 // Return an error:
-                reply.cause = "wrong_policy";
+                reply.cause = CONST.ERRORS.WRONG_POLICY;
                 
                 res.status(400).send(reply);
             }
@@ -817,7 +817,7 @@ exports.status = function(req, res)
                             }
                             else
                             {
-                                reply.cause = "not_found";
+                                reply.cause = CONST.ERRORS.NOT_FOUND;
                                 
                                 res.status(404).send(reply);
                             }
@@ -825,7 +825,7 @@ exports.status = function(req, res)
                         else
                         {
                             // Malformed ticket in the DB: early-reply and delete
-                            reply.cause = "malformed_ticket";
+                            reply.cause = CONST.ERRORS.MALFORMED_TICKET;
 
                             res.status(500).send(reply);
                             
@@ -852,7 +852,7 @@ exports.status = function(req, res)
                         }
                         else
                         {
-                            reply.cause = "not_found";
+                            reply.cause = CONST.ERRORS.NOT_FOUND;
                             
                             res.status(404).send(reply);
                         }
@@ -862,7 +862,7 @@ exports.status = function(req, res)
         }
         else
         {
-            reply.cause = "empty_request";
+            reply.cause = CONST.ERRORS.EMPTY_REQUEST;
             
             res.status(400).send(reply);
         }
@@ -905,7 +905,7 @@ exports.expire = function(req, res)
                             }
                             else
                             {
-                                reply.cause = "different_policy";
+                                reply.cause = CONST.ERRORS.DIFFERENT_POLICY;
                                     
                                 res.status(400).send(reply);
                             }
@@ -913,7 +913,7 @@ exports.expire = function(req, res)
                         else
                         {
                             // Malformed ticket in the DB: early-reply and delete
-                            reply.cause = "malformed_ticket";
+                            reply.cause = CONST.ERRORS.MALFORMED_TICKET;
 
                             res.status(500).send(reply);
                             
@@ -934,13 +934,13 @@ exports.expire = function(req, res)
                         
                         if (expired)
                         {
-                            reply.cause = "ticket_already_expired";
+                            reply.cause = CONST.ERRORS.TICKET_ALREADY_EXPIRED;
                             
                             res.status(400).send(reply);
                         }
                         else
                         {
-                            reply.cause = "not_found";
+                            reply.cause = CONST.ERRORS.NOT_FOUND;
                             
                             res.status(404).send(reply);
                         }
@@ -950,7 +950,7 @@ exports.expire = function(req, res)
         }
         else
         {
-            reply.cause = "empty_request";
+            reply.cause = CONST.ERRORS.EMPTY_REQUEST;
             
             res.status(400).send(reply);
         }
