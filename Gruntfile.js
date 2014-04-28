@@ -2,6 +2,7 @@
 
 
 var request = require('request');
+var sleep   = require('sleep').sleep;
 var fs      = require('fs');
 
 
@@ -129,11 +130,20 @@ module.exports = function (grunt)
         process.kill(pid, 'SIGTERM');
     });
     
-    grunt.registerTask('test', ['jshint', 'nodeunit']);
+    grunt.registerTask('wait', 'Wait N seconds', function()
+    {
+        var secs = 2;
+        
+        grunt.log.writeln('Waiting %d seconds before continuing...', secs);
+        
+        sleep(secs);
+    });
     
     grunt.registerTask('start', ['warmup', 'startserver']);
     
     grunt.registerTask('stop', ['stopserver']);
+    
+    grunt.registerTask('test', ['jshint', 'start', 'wait', 'nodeunit', 'wait', 'stop']);
 
     grunt.registerTask('default', ['start', 'watch']);
 };
