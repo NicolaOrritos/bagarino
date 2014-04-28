@@ -23,17 +23,25 @@ var CONST   = require('../lib/const');
     test.ifError(value)
 */
 
+var existingContext = 'thisisacontext';
+
 exports.read =
 {
     setUp: function(done)
     {
-        // setup here
-        
-        done();
+        request.get('http://localhost:8124/tickets/new?policy=manual_expiration&context=' + existingContext, function(err)
+        {
+            if (err)
+            {
+                console.log('Error setting up the test: %s', err);
+            }
+            
+            done();
+        });
     },
     'Contexts route': function(test)
     {
-        test.expect(6);
+        test.expect(9);
         
         var context = "nonexistentcontext";
         
@@ -56,7 +64,21 @@ exports.read =
                 test.ifError(err2);
                 test.equal(res2.statusCode, 404);
                 
-                test.done();
+                request.get('http://localhost:8124/contexts/' + existingContext + '/expireall', function(err3, res3)
+                {
+                    console.log("Result: %s", res3.body);
+
+                    test.ifError(err3);
+
+                    test.equal(res3.statusCode, 200);
+
+                    result = JSON.parse(res3.body);
+                    
+                    test.deepEqual(result.expired, 1);
+                    
+                    
+                    test.done();
+                });
             });
         });
     }

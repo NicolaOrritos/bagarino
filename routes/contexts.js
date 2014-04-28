@@ -16,9 +16,11 @@ var REDIS_DB = 3;
 
 function removeTicket(context, ticket, metacallback)
 {
-    if (ticket)
+    if (ticket && context)
     {
-        client.hget(CONST.VALID_TICKET_PREFIX + ticket, "policy", function(error, policy_str)
+        console.log("Removing ticket '%s' from context '%s'...", (CONST.VALID_PREFIX + ticket), context);
+        
+        client.hget(CONST.VALID_PREFIX + ticket, "policy", function(error, policy_str)
         {
             if (policy_str)
             {
@@ -28,11 +30,11 @@ function removeTicket(context, ticket, metacallback)
                     || policy.can_force_expiration === true)
                 {
                     // Save the "expired" counterpart when manually expiring:
-                    client.set(CONST.EXPIRED_TICKET_PREFIX + ticket, CONST.EXPIRED_TICKET);
-                    client.expire(CONST.EXPIRED_TICKET_PREFIX + ticket, policy.remember_until);
+                    client.set(CONST.EXPIRED_PREFIX + ticket, CONST.EXPIRED_TICKET);
+                    client.expire(CONST.EXPIRED_PREFIX + ticket, policy.remember_until);
                     
                     // Finally delete valid ticket
-                    client.del(CONST.VALID_TICKET_PREFIX + ticket);
+                    client.del(CONST.VALID_PREFIX + ticket);
                     
                     client.lrem(context, "1", ticket, function(err, removed)
                     {
@@ -60,7 +62,39 @@ function removeTicket(context, ticket, metacallback)
             else
             {
                 // Malformed ticket in the DB: delete
-                client.del(CONST.VALID_TICKET_PREFIX + ticket);
+                client.del(CONST.VALID_PREFIX + ticket, function(err)
+                {
+                    if (err)
+                    {
+                        console.log("Could not delete supposedly-malformed ticket. Cause: %s", err);
+                    }
+                    
+                    client.del(CONST.EXPIRED_PREFIX + ticket, function(err2)
+                    {
+                        if (err2)
+                        {
+                            console.log("Could not fully delete supposedly-malformed ticket. Cause: %s", err2);
+                        }
+                        
+                        client.lrem(context, "1", ticket, function(err, removed)
+                        {
+                            if (err)
+                            {
+                                console.log("Could not remove supposedly-malformed ticket '%s' from context map '%s'. Cause: %s", ticket, context, err);
+                            }
+                            else if (removed)
+                            {
+                                console.log("Removed '%s' supposedly-malformed ticket(s) from context-map", removed);
+
+                                metacallback(true);
+                            }
+                            else
+                            {
+                                metacallback(false);
+                            }
+                        });
+                    });
+                });
                 
                 metacallback(false);
             }
@@ -71,7 +105,7 @@ function removeTicket(context, ticket, metacallback)
 
 exports.expireall = function(req, res)
 {
-    var reply = {"status": CONST.ERROR, "cause": CONST.ERRORS.UNKNOWN};
+    var reply = {"status": CONST.ERROR};
     
     var context = req.param("context");
     
@@ -95,8 +129,6 @@ exports.expireall = function(req, res)
                         deletedCount++;
                     }
 
-                    console.log("Metacallback called. Processed: %s", processed);
-
                     if (processed === tickets.length)
                     {
                         reply.status = CONST.OK;
@@ -118,15 +150,11 @@ exports.expireall = function(req, res)
                 }
                 else
                 {
-                    console.log("Tickets found: %s", JSON.stringify(tickets));
-                    
                     if (tickets.length > 0)
                     {
                         for (var a=0; a<tickets.length; a++)
                         {
                             var ticket = tickets[a];
-                            
-                            console.log("Removing ticket '%s'...", ticket);
                             
                             removeTicket(context, ticket, metacallback);
                         }
