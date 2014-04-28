@@ -33,7 +33,7 @@ exports.read =
     },
     'Contexts route': function(test)
     {
-        test.expect(4);
+        test.expect(6);
         
         var context = "nonexistentcontext";
         
@@ -48,10 +48,16 @@ exports.read =
             var result = JSON.parse(res.body);
             
             test.equal(result.status, CONST.OK);
-            test.equal(result.cause, "empty_context");
+            test.equal(result.cause, CONST.ERRORS.EMPTY_CONTEXT);
             
             
-            test.done();
+            request.get('http://localhost:8124/contexts//expireall', function(err2, res2)
+            {
+                test.ifError(err2);
+                test.equal(res2.statusCode, 404);
+                
+                test.done();
+            });
         });
     }
 };

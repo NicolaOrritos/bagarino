@@ -132,9 +132,9 @@ module.exports = function (grunt)
     
     grunt.registerTask('wait', 'Wait N seconds', function()
     {
-        var secs = 2;
+        var secs = 1;
         
-        grunt.log.writeln('Waiting %d seconds before continuing...', secs);
+        grunt.log.writeln('Waiting %d second(s) before continuing...', secs);
         
         sleep(secs);
     });
