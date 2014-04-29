@@ -31,7 +31,7 @@ exports.read =
     },
     'Tickets route - Part 2': function(test)
     {
-        test.expect(10);
+        test.expect(11);
         
         var seconds = 2;
         
@@ -46,6 +46,8 @@ exports.read =
             test.ok(result.expires_in > (seconds / 2));
             
             var ticket = result.ticket;
+            
+            test.ok(ticket);
             
             
             request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err2, res2)

@@ -47,8 +47,6 @@ exports.read =
         
         request.get('http://localhost:8124/contexts/' + context + '/expireall', function(err, res)
         {
-            console.log("Result: %s", res.body);
-            
             test.ifError(err);
             
             test.equal(res.statusCode, 200);
@@ -66,8 +64,6 @@ exports.read =
                 
                 request.get('http://localhost:8124/contexts/' + existingContext + '/expireall', function(err3, res3)
                 {
-                    console.log("Result: %s", res3.body);
-
                     test.ifError(err3);
 
                     test.equal(res3.statusCode, 200);

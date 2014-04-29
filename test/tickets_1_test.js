@@ -31,7 +31,7 @@ exports.read =
     },
     'Tickets route - Part 1': function(test)
     {
-        test.expect(14);
+        test.expect(15);
         
         request.get('http://localhost:8124/tickets/new?policy=manual_expiration', function(err, res)
         {
@@ -62,6 +62,7 @@ exports.read =
 
                     test.equal(result.result, CONST.OK);
                     test.equal(result.expires_in, 1);
+                    test.ok(result.ticket);
                     
                     
                     request.get('http://localhost:8124/tickets/' + result.ticket + '/status', function(err4, res4)
