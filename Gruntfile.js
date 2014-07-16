@@ -110,7 +110,7 @@ module.exports = function (grunt)
         });
     });
     
-    grunt.registerTask('startserver', 'Start and detach all the servers comprising READ', function()
+    grunt.registerTask('startserver', 'Start the service', function()
     {
         grunt.task.requires('warmup');
         
@@ -121,7 +121,7 @@ module.exports = function (grunt)
         fork('bin/start-bagarino-daemon_dev', [], {detached: true, cwd: process.cwd(), env: process.env});
     });
     
-    grunt.registerTask('stopserver', 'Start and detach all the servers comprising READ', function()
+    grunt.registerTask('stopserver', 'Stop the service', function()
     {
         var pid = fs.readFileSync('./logs/bagarino.pid', {encoding: 'UTF-8'});
         
