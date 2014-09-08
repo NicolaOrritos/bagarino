@@ -143,6 +143,14 @@ The way to ask for a context-bound token is as follows:
     200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
 
+### Auto-renewing tickets
+Requests-based tickets may be decorated at creation with an additional switch named _"autorenew"_.
+It may have two values, _true_ or _false_. When _true_ bagarino automatically spawns a new ticket when the old one's expiration is one request away, and returns it alongside the validity/expiration info of a _"status"_ request.
+The new ticket's policy and TTL will be the same of the old one's.
+(more docs soon...)
+
+
+
 
 LICENSE - Apache License v2
 ---------------------------
