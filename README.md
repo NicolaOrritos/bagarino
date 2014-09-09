@@ -53,16 +53,16 @@ Let's see some requests that create tickets with different expiration policies:
 
     http://localhost:8124/tickets/new?policy=requests_based&requests=5
     200 OK {"result":"OK","ticket":"62a315cd7bdae5e84567cad9620f82b5defd3ef0","expires_in":5,"policy":"requests_based"}
-    
+
     http://localhost:8124/tickets/new?policy=requests_based
     200 OK {"result":"OK","ticket":"0b4e20ce63f7de9a4a77910e7f909e5dba4538f3","expires_in":100,"policy":"requests_based"}
-    
+
     http://localhost:8124/tickets/new?policy=time_based&seconds=120
     200 OK {"result":"OK","ticket":"50ab14d6f5dd082e8ed343f7adb5f916fa76188a","expires_in":120,"policy":"time_based"}
-    
+
     http://localhost:8124/tickets/new?policy=cascading&depends_on=f073145dfdf45a6e85d0f758f78fd627fa301983
     200 OK {"result":"OK","ticket":"9ae23360fb4e9b3348917eb5e9b8a8e725b0dcb0","depends_on":"f073145dfdf45a6e85d0f758f78fd627fa301983","policy":"cascading"}
-    
+
     http://localhost:8124/tickets/new?policy=manual_expiration
     200 OK {"result":"OK","ticket":"f57d75c23f6a49951a6e886bbc60de74bc02ef33","policy":"manual_expiration"}
 
@@ -144,11 +144,23 @@ The way to ask for a context-bound token is as follows:
 
 
 ### Auto-renewing tickets
-Requests-based tickets may be decorated at creation with an additional switch named _"autorenew"_.
-It may have two values, _true_ or _false_. When _true_ bagarino automatically spawns a new ticket when the old one's expiration is one request away, and returns it alongside the validity/expiration info of a _"status"_ request.
-The new ticket's policy and TTL will be the same of the old one's.
-(more docs soon...)
+A ticket created with the option _autorenew=true_ automatically generates a new one right before expiring.
+Only requests-based ones can be decorated at creation with the additional option _"autorenew"_.
+When this option is _true_ bagarino automatically spawns a new ticket when the old one's expiration is one request away,
+returning this newly created one alongside the validity/expiration info of a _"status"_ request.
+The new ticket's policy and initial TTL will be the same as the old one's.
 
+Here's how an autorenew ticket is created:
+
+	http://localhost:8124/tickets/new?policy=requests_based&requests=10&autorenew=true
+	200 OK {"result":"OK","expires_in":10,"ticket":"0cca33a81e4ce168f218d74692e096c676af2a25","policy":"requests_based"}
+
+After asking 9 times for this ticket validity here's what happens asking one more time:
+
+	http://localhost:8124/tickets/0cca33a81e4ce168f218d74692e096c676af2a25/status
+	200 OK {"status":"VALID","expires_in":0,"policy":"requests_based","next_ticket":"c7433c48f56bd224de43b232657165842609690b"}
+
+A new ticket, _c7433c48f56bd224de43b232657165842609690b_, is born, right when the old one expires and with the same policy and initial TTL.
 
 
 
@@ -167,4 +179,3 @@ distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
-
