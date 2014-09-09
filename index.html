@@ -148,13 +148,13 @@ The parameter <em>"expires_in"</em> has to be read based on the policy of the ti
 <ul>
 <li>When the policy is <strong>time_based</strong> then <em>"expires_in"</em> is the number of seconds before the ticket expires</li>
 <li>When the policy is <strong>requests_based</strong> the value of <em>"expires_in"</em> is the number of requests before the ticket expires</li>
-</ul><h3>
-<a name="expired-tickets" class="anchor" href="#expired-tickets"><span class="octicon octicon-link"></span></a>Expired tickets</h3>
+</ul>
+
+<h3>Expired tickets</h3>
 
 <p>Expired tickets are kept in memory by bagarino for 10 days. After that time a call to their status will return "NOT_VALID" as it would for a ticket that didn't exist in the first place.</p>
 
-<h3>
-<a name="forceable-manual-expiration" class="anchor" href="#forceable-manual-expiration"><span class="octicon octicon-link"></span></a>Forceable manual expiration</h3>
+<h3>Forceable manual expiration</h3>
 
 <p>Even tickets with a policy other than <em>"manual_expiration"</em> can be forcibly ended by calling the <em>expire</em> verb, provided that they had been created with an ad-hoc option, <em>"can_force_expiration"</em>:</p>
 
@@ -173,8 +173,7 @@ The parameter <em>"expires_in"</em> has to be read based on the policy of the ti
 <pre><code>400 Bad Request {"status": "ERROR", "cause": "different_policy"}
 </code></pre>
 
-<h3>
-<a name="mass-creation-of-tickets" class="anchor" href="#mass-creation-of-tickets"><span class="octicon octicon-link"></span></a>Mass-creation of tickets</h3>
+<h3>Mass-creation of tickets</h3>
 
 <p>It's possible to create more tickets at once by adding the paramenter "count" to the query-string of the verb <em>new</em>, followed by the number of tickets to be created.
 The maximum number of tickets that can be created this way is capped to prevent overloading the system.
@@ -184,8 +183,7 @@ Here's a typical request for mass-creation of tickets:</p>
 200 OK {"result":"OK","tickets":["9c7800ec9cf053e60674042533710c556fe22949","3cd5da62c2ba6d2b6b8973016264282f61f4afdd","7207c7effb2bd8fd97b885a4f72492a97e79babf","75a6cf2ba0454dfe74a4d6ce8baa80881fb76005"],"expire_in":60,"policy":"time_based"}
 </code></pre>
 
-<h3>
-<a name="tickets-contexts" class="anchor" href="#tickets-contexts"><span class="octicon octicon-link"></span></a>Tickets contexts</h3>
+<h3>Tickets contexts</h3>
 
 <p>Sometimes it may be useful to bound one or more tickets to a "context" so they only acquire a meaning under certain conditions.
 In bagarino this is done by attaching a textual context to the ticket during the "new" operation:</p>
@@ -206,17 +204,28 @@ In bagarino this is done by attaching a textual context to the ticket during the
 200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 </code></pre>
 
-<h2>
-<a name="license---apache-license-v2" class="anchor" href="#license---apache-license-v2"><span class="octicon octicon-link"></span></a>LICENSE - Apache License v2</h2>
+<h3>Auto-renewing tickets</h3>
+<p>A ticket created with the option <em>autorenew=true</em> automatically generates a new one right before expiring.
+Only requests-based ones can be decorated at creation with the additional option <em>"autorenew"</em>.
+When this option is <em>true</em> bagarino automatically spawns a new ticket when the old one's expiration is one request away,
+returning this newly created one alongside the validity/expiration info of a <em>"status"</em> request.
+The new ticket's policy and initial TTL will be the same as the old one's.</p>
+<p>Here's how an autorenew ticket is created:</p>
+<pre><code>http://localhost:8124/tickets/new?policy=requests_based&amp;requests=10&amp;autorenew=true
+200 OK {"result":"OK","expires_in":10,"ticket":"0cca33a81e4ce168f218d74692e096c676af2a25","policy":"requests_based"}
+</code></pre>
+<p>After asking 9 times for this ticket validity here's what happens asking one more time:</p>
+<pre><code>http://localhost:8124/tickets/0cca33a81e4ce168f218d74692e096c676af2a25/status
+200 OK {"status":"VALID","expires_in":0,"policy":"requests_based","next_ticket":"c7433c48f56bd224de43b232657165842609690b"}
+</code></pre>
+<p>A new ticket, <em>c7433c48f56bd224de43b232657165842609690b</em>, is born, right when the old one expires and with the same policy and initial TTL.</p>
 
+<h2>LICENSE - Apache License v2</h2>
 <p>Copyright (c) 2014 Nicola Orritos</p>
-
 <p>Licensed under the Apache License, Version 2.0 (the "License");
 you may not use these files except in compliance with the License.
 You may obtain a copy of the License at</p>
-
 <p><a href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a></p>
-
 <p>Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
