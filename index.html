@@ -55,11 +55,50 @@ To start bagarino run the following command:</p>
 <pre><code>sudo bagarino
 </code></pre>
 
-<p><em>bagarino</em> is now up and running, listening for requests on port 8124.
-Here's a detailed guide on how to submit a request for creating new tickets and/or validating old ones.</p>
+<p><em>bagarino</em> is now up and running, listening for requests on port 8124.</p>
 
-<h3>
-<a name="new-tickets" class="anchor" href="#new-tickets"><span class="octicon octicon-link"></span></a>New tickets</h3>
+<h2><a name="user-content-configuration" class="anchor" href="#configuration"><span class="octicon octicon-link"></span></a>Configuration</h2>
+
+<p>Right out of the box <em>bagarino</em> is configured to run with default settings that make it listen on port 8124, protocol <em>http</em>, and log to <em>/var/log</em>.<br>
+These settings can be easily overridden by placing a file named <em>"bagarino.conf"</em> under <em>/etc</em>.
+This file must contain a valid JSON, organized as follows:</p>
+
+<div class="highlight highlight-js"><pre><span class="p">{</span>
+    <span class="s2">"ENVIRONMENT"</span><span class="o">:</span> <span class="s2">"production"</span><span class="p">,</span>
+
+    <span class="s2">"PORT"</span><span class="o">:</span> <span class="mi">8124</span><span class="p">,</span>
+    <span class="s2">"HTTPS_PORT"</span><span class="o">:</span> <span class="mi">8443</span><span class="p">,</span>
+
+    <span class="s2">"SERVER_TYPE"</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">"HTTPS"</span><span class="o">:</span> <span class="p">{</span>
+            <span class="s2">"ENABLED"</span><span class="o">:</span> <span class="kc">false</span><span class="p">,</span>
+            <span class="s2">"KEY"</span><span class="o">:</span>  <span class="s2">"private/key.pem"</span><span class="p">,</span>
+            <span class="s2">"CERT"</span><span class="o">:</span> <span class="s2">"private/cert.crt"</span>
+        <span class="p">},</span>
+        <span class="s2">"HTTP"</span><span class="o">:</span> <span class="p">{</span>
+            <span class="s2">"ENABLED"</span><span class="o">:</span> <span class="kc">true</span>
+        <span class="p">}</span>
+    <span class="p">},</span>
+
+    <span class="s2">"LOGGING"</span><span class="o">:</span> <span class="p">{</span>
+        <span class="s2">"ENABLED"</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+        <span class="s2">"PATH"</span><span class="o">:</span> <span class="s2">"/var/log"</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>The <strong>"ENVIRONMENT"</strong> key is passed to Nodejs and tells it whether to start in <em>production</em> or <em>development</em> mode.<br>
+The two keys <strong>"PORT"</strong> and <strong>"HTTPS_PORT"</strong> set on which port the server will be listening for incoming requests.<br>
+The <strong>"SERVER_TYPE"</strong> key enables one of the two modes <em>bagarino</em> can be started in, either simple HTTP or HTTPS.<br>
+The "HTTPS" sub-key has some more configuration in it as the paths to the key and certificate files must be provided.<br>
+Finally, the <strong>"LOGGING"</strong> key establishes under which folder the logs will be placed.</p>
+
+<h2><a name="user-content-tickets" class="anchor" href="#tickets"><span class="octicon octicon-link"></span></a>Tickets</h2>
+
+<p>Here's a detailed guide on how to submit a request for creating new tickets and/or validating old ones.</p>
+
+
+<h3><a name="new-tickets" class="anchor" href="#new-tickets"><span class="octicon octicon-link"></span></a>New tickets</h3>
 
 <p>Obtain a new ticket:</p>
 
