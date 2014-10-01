@@ -1,40 +1,36 @@
 {
-    "name": "bagarino",
-    "version": "1.2.2",
-    "private": false,
-    
-    "repository": {
-        "type": "git",
-        "url": "git://github.com/NicolaOrritos/bagarino"
-    },
-    
-    "bin": "bin/start-bagarino-daemon",
-    
-    "dependencies": {
-        "express": "",
-        "redis": "",
-        "node_hash": "",
-        "hiredis": "",
-        "log": "",
-        "sjl": "",
-        "daemon": "",
-        "static-favicon": "",
-        "method-override": "",
-        "morgan": "",
-        "body-parser": "",
-        "errorhandler": ""
-    },
-    
-    "devDependencies": {
-        "grunt": "~0.4.1",
-        "grunt-develop": "~0.2.2",
-        "grunt-contrib-watch": "~0.5.3",
-        "grunt-contrib-jshint": "~0.7.0",
-        "grunt-contrib-nodeunit": "~0.2.0",
-        "jshint-stylish": "^0.1.5",
-        "request": "~2.27.0",
-        "time-grunt": "~0.1.1",
-        "load-grunt-tasks": "~0.2.0",
-        "sleep": ""
-    }
+  "name": "bagarino",
+  "version": "1.3.0",
+  "private": false,
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/NicolaOrritos/bagarino"
+  },
+  "bin": "bin/start-bagarino-daemon",
+  "dependencies": {
+    "body-parser": "^1.9.0",
+    "daemon": "~1.1.0",
+    "errorhandler": "^1.2.0",
+    "express": "^4.9.5",
+    "hiredis": "~0.1.17",
+    "log": "~1.4.0",
+    "method-override": "^1.0.2",
+    "morgan": "^1.3.2",
+    "node_hash": "~0.2.0",
+    "redis": "^0.10.3",
+    "sjl": "~0.4.0",
+    "serve-favicon": "~2.0.0"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-develop": "~0.2.2",
+    "grunt-contrib-watch": "~0.5.3",
+    "grunt-contrib-jshint": "~0.7.0",
+    "grunt-contrib-nodeunit": "~0.2.0",
+    "jshint-stylish": "^0.1.5",
+    "request": "~2.27.0",
+    "time-grunt": "~0.1.1",
+    "load-grunt-tasks": "~0.2.0",
+    "sleep": ""
+  }
 }
