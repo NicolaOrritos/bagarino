@@ -10,7 +10,6 @@ var http           = require("http");
 var https          = require("https");
 var cluster        = require("cluster");
 var express        = require("express");
-var favicon        = require('static-favicon');
 var morgan         = require('morgan');
 var bodyParser     = require('body-parser');
 var methodOverride = require('method-override');
@@ -53,7 +52,6 @@ var CONF = sjl("/etc/bagarino.conf", defaults);
 var app = express();
 
 app.set('port', CONF.PORT);
-app.use(favicon());
 app.use(morgan('dev'));
 app.use(bodyParser());
 app.use(methodOverride());
