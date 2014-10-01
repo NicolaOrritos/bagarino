@@ -23,21 +23,21 @@ var Log            = require("log");
  */
 var defaults = {
     "ENVIRONMENT": "production",
-    
+
     "PORT": 8124,
     "HTTPS_PORT": 8443,
 
     "SERVER_TYPE": {
         "HTTPS": {
-            "ENABLED": true,
+            "ENABLED": false,
             "KEY":  "private/key.pem",
             "CERT": "private/cert.crt"
         },
         "HTTP": {
-            "ENABLED": false
+            "ENABLED": true
         }
     },
-    
+
     "LOGGING": {
         "ENABLED": true,
         "PATH": "/var/log"
@@ -61,7 +61,7 @@ app.use(methodOverride());
 if ('development' === app.get('env'))
 {
     app.locals.pretty = true;
-    
+
     // Let logs go to stdout
     global.log = new Log("debug");
 }
@@ -100,7 +100,7 @@ if (CONF.SERVER_TYPE.HTTP.ENABLED)
             process.setgid("nobody");
             process.setuid("nobody");
         }
-        
+
         global.log.info("BAGARINO HTTP server listening on port %d in %s mode [worker is %s]",
                         CONF.PORT,
                         app.settings.env,
@@ -112,9 +112,9 @@ if (CONF.SERVER_TYPE.HTTPS.ENABLED)
 {
     var privateKey  = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.KEY,  "utf8");
     var certificate = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.CERT, "utf8");
-    
+
     var credentials = {key: privateKey, cert: certificate};
-    
+
     server = https.createServer(credentials, app).listen(CONF.HTTPS_PORT, function()
     {
         // Drop privileges if we are running as root
@@ -123,7 +123,7 @@ if (CONF.SERVER_TYPE.HTTPS.ENABLED)
             process.setgid("nobody");
             process.setuid("nobody");
         }
-        
+
         global.log.info("BAGARINO HTTPS server listening on port %d in %s mode [worker is %s]",
                         CONF.HTTPS_PORT,
                         app.settings.env,
@@ -151,4 +151,3 @@ process.on("SIGTERM", function()
         });
     }
 });
-
