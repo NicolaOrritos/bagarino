@@ -19,6 +19,43 @@ To start bagarino run the following command:
 	sudo bagarino
 
 _bagarino_ is now up and running, listening for requests on port 8124.
+
+Configuration
+-------------
+Right out of the box _bagarino_ is configured to run with default settings that make it listen on port 8124, protocol _http_, and log to _/var/log_.  
+These settings can be easily overridden by placing a file named _"bagarino.conf"_ under _/etc_.
+This file must contain a valid JSON, organized as follows:
+```js
+{
+	"ENVIRONMENT": "production",
+
+	"PORT": 8124,
+	"HTTPS_PORT": 8443,
+
+	"SERVER_TYPE": {
+		"HTTPS": {
+			"ENABLED": false,
+			"KEY":  "private/key.pem",
+			"CERT": "private/cert.crt"
+		},
+		"HTTP": {
+			"ENABLED": true
+		}
+	},
+
+	"LOGGING": {
+		"ENABLED": true,
+		"PATH": "/var/log"
+	}
+}
+```
+The **"ENVIRONMENT"** key is passed to Nodejs and tells it whether to start in _production_ or _development_ mode.  
+The two keys **"PORT"** and **"HTTPS_PORT"** set on which port the server will be listening for incoming requests.  
+The **"SERVER_TYPE"** key enables one of the two modes _bagarino_ can be started in, either simple HTTP or HTTPS.  
+The "HTTPS" sub-key has some more configuration in it as the paths to the key and certificate files must be provided.  
+Finally, the **"LOGGING"** key establishes under which folder the logs will be placed.
+
+## Tickets
 Here's a detailed guide on how to submit a request for creating new tickets and/or validating old ones.
 
 ### New tickets
