@@ -13,6 +13,8 @@ module.exports = function (grunt)
     
     // load all grunt tasks
     require('load-grunt-tasks')(grunt);
+    
+    grunt.loadNpmTasks('grunt-plato');
 
     var reloadPort = 35729, files;
 
@@ -47,6 +49,18 @@ module.exports = function (grunt)
             test:
             {
                 src: ['test/**/*.js']
+            }
+        },
+        
+        plato: {
+            analyze_all: {
+                options : {
+                    jshint : grunt.file.readJSON('.jshintrc')
+                },
+                
+                files: {
+                    'reports': ['bin/**/*.js', 'lib/**/*.js', 'routes/**/*.js']
+                }
             }
         },
         
@@ -143,7 +157,7 @@ module.exports = function (grunt)
     
     grunt.registerTask('stop', ['stopserver']);
     
-    grunt.registerTask('test', ['jshint', 'start', 'wait', 'nodeunit', 'wait', 'stop']);
+    grunt.registerTask('test', ['jshint', 'start', 'wait', 'nodeunit', 'wait', 'stop', 'plato']);
 
     grunt.registerTask('default', ['start', 'watch']);
 };
