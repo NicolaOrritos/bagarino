@@ -8,6 +8,9 @@ var hash  = require('node_hash');
 var redis = require('redis');
 var CONST = require('../lib/const');
 
+var P     = global.Promise || require('bluebird');
+
+
 var client = redis.createClient();
 
 client.on("error", function (err)
@@ -19,192 +22,196 @@ var REDIS_DB = 3;
 
 
 // [todo] - Add bandwidth-based policy
-function calculateExpirationPolicy(query_string, save_ticket)
+function calculateExpirationPolicy(query_string)
 {
-    if (save_ticket && query_string)
+    return new P(function(resolve, reject)
     {
-        var policy = {
-            // Policies available for tickets:
-            time_based: false,
-            requests_based: false,
-            manual_expiration: false,
-            cascading: false,
-            bandwidth_based: false,
-            
-            // When the ticket has a cascading policy this field tracks the one it depends on:
-            depends_on: undefined,
-            
-            // Track an optional context for this ticket
-            context: undefined,
-            
-            // Auto-renewable ticket?
-            autorenew: false,
-            
-            // Can expiration be forced?
-            can_force_expiration: false,
-            
-            // Number of seconds/requests until this ticket expires
-            expires_in: undefined,
-            remember_until: CONST.DEFAULT_REMEMBER_UNTIL
-        };
-        
-        
-        // The policy may contain a "context":
-        if (query_string.context)
+        if (query_string)
         {
-            policy.context = query_string.context;
-        }
-        
-        if (query_string.autorenew)
-        {
-            policy.autorenew = (query_string.autorenew === true || query_string.autorenew === "true");
-        }
-        
-        if (query_string.can_force_expiration)
-        {
-            policy.can_force_expiration = (query_string.can_force_expiration === true || query_string.can_force_expiration === "true");
-        }
-        
-        
-        if (query_string.policy === CONST.POLICIES.REQUESTS_BASED)
-        {
-            policy.requests_based = true;
-            
-            if (query_string.requests)
+            var policy =
             {
-                var reqs = parseInt(query_string.requests);
-                
-                if (isNaN(reqs))
+                // Policies available for tickets:
+                time_based: false,
+                requests_based: false,
+                manual_expiration: false,
+                cascading: false,
+                bandwidth_based: false,
+
+                // When the ticket has a cascading policy this field tracks the one it depends on:
+                depends_on: undefined,
+
+                // Track an optional context for this ticket
+                context: undefined,
+
+                // Auto-renewable ticket?
+                autorenew: false,
+
+                // Can expiration be forced?
+                can_force_expiration: false,
+
+                // Number of seconds/requests until this ticket expires
+                expires_in: undefined,
+                remember_until: CONST.DEFAULT_REMEMBER_UNTIL
+            };
+
+
+            // The policy may contain a "context":
+            if (query_string.context)
+            {
+                policy.context = query_string.context;
+            }
+
+            if (query_string.autorenew)
+            {
+                policy.autorenew = (query_string.autorenew === true || query_string.autorenew === "true");
+            }
+
+            if (query_string.can_force_expiration)
+            {
+                policy.can_force_expiration = (query_string.can_force_expiration === true || query_string.can_force_expiration === "true");
+            }
+
+
+            if (query_string.policy === CONST.POLICIES.REQUESTS_BASED)
+            {
+                policy.requests_based = true;
+
+                if (query_string.requests)
+                {
+                    var reqs = parseInt(query_string.requests);
+
+                    if (isNaN(reqs))
+                    {
+                        policy.expires_in = CONST.DEFAULT_EXPIRES_IN_REQUESTS;
+                    }
+                    else
+                    {
+                        policy.expires_in = reqs;
+                    }
+                }
+                else
                 {
                     policy.expires_in = CONST.DEFAULT_EXPIRES_IN_REQUESTS;
                 }
-                else
+
+                if (policy.autorenew)
                 {
-                    policy.expires_in = reqs;
+                    policy.original_expires_in = policy.expires_in;
                 }
+
+
+                resolve(policy);
             }
-            else
+            else if (query_string.policy === CONST.POLICIES.MANUAL_EXPIRATION)
             {
-                policy.expires_in = CONST.DEFAULT_EXPIRES_IN_REQUESTS;
+                policy.manual_expiration = true;
+
+                resolve(policy);
             }
-            
-            if (policy.autorenew)
+            else if (query_string.policy === CONST.POLICIES.TIME_BASED)
             {
-                policy.original_expires_in = policy.expires_in;
-            }
-            
-            
-            save_ticket.call(this, policy);
-        }
-        else if (query_string.policy === CONST.POLICIES.MANUAL_EXPIRATION)
-        {
-            policy.manual_expiration = true;
-            
-            save_ticket.call(this, policy);
-        }
-        else if (query_string.policy === CONST.POLICIES.TIME_BASED)
-        {
-            policy.time_based = true;
-            
-            if (query_string.seconds)
-            {
-                var secs = parseInt(query_string.seconds);
-                
-                if (isNaN(secs))
+                policy.time_based = true;
+
+                if (query_string.seconds)
+                {
+                    var secs = parseInt(query_string.seconds);
+
+                    if (isNaN(secs))
+                    {
+                        policy.expires_in = CONST.DEFAULT_EXPIRES_IN_SECONDS;
+                    }
+                    else
+                    {
+                        policy.expires_in = secs;
+                    }
+                }
+                else
                 {
                     policy.expires_in = CONST.DEFAULT_EXPIRES_IN_SECONDS;
                 }
+
+
+                resolve(policy);
+            }
+            else if (query_string.policy === CONST.POLICIES.CASCADING)
+            {
+                policy.cascading = true;
+
+                var dep_ticket = query_string.depends_on;
+
+                global.log.debug("Creating cascading-policy ticket dependent on ticket '%s'", dep_ticket);
+
+                if (dep_ticket)
+                {
+                    client.select(REDIS_DB, function()
+                    {
+                        client.exists(CONST.VALID_PREFIX + dep_ticket, function(error, exists)
+                        {
+                            if(exists)
+                            {
+                                global.log.debug("Dependency ticket '%s' exists", dep_ticket);
+
+                                policy.depends_on = dep_ticket;
+
+                                global.log.debug("Resulting policy for cascading ticket is: " + JSON.stringify(policy));
+                            }
+                            else
+                            {
+                                global.log.debug("Dependency ticket '%s' DOES NOT exists", dep_ticket);
+
+                                policy = undefined;
+                            }
+
+
+                            resolve(policy);
+                        });
+                    });
+                }
                 else
                 {
-                    policy.expires_in = secs;
+                    policy = undefined;
+
+                    reject();
                 }
             }
-            else
+            else if (query_string.policy === CONST.POLICIES.BANDWIDTH_BASED)
             {
-                policy.expires_in = CONST.DEFAULT_EXPIRES_IN_SECONDS;
-            }
-            
-            
-            save_ticket.call(this, policy);
-        }
-        else if (query_string.policy === CONST.POLICIES.CASCADING)
-        {
-            policy.cascading = true;
-            
-            var dep_ticket = query_string.depends_on;
-            
-            global.log.debug("Creating cascading-policy ticket dependent on ticket '%s'", dep_ticket);
-            
-            if (dep_ticket)
-            {
-                client.select(REDIS_DB, function()
+                policy.bandwidth_based = true;
+
+                if (query_string.reqs_per_minute)
                 {
-                    client.exists(CONST.VALID_PREFIX + dep_ticket, function(error, exists)
+                    var reqsPerMin = parseInt(query_string.reqs_per_minute);
+
+                    if (isNaN(reqsPerMin))
                     {
-                        if(exists)
-                        {
-                            global.log.debug("Dependency ticket '%s' exists", dep_ticket);
-                            
-                            policy.depends_on = dep_ticket;
-                            
-                            global.log.debug("Resulting policy for cascading ticket is: " + JSON.stringify(policy));
-                        }
-                        else
-                        {
-                            global.log.debug("Dependency ticket '%s' DOES NOT exists", dep_ticket);
-                            
-                            policy = undefined;
-                        }
-                        
-                        
-                        save_ticket.call(this, policy);
-                    });
-                });
+                        policy.expires_in = CONST.DEFAULT_REQUESTS_PER_MINUTE;
+                    }
+                    else
+                    {
+                        policy.expires_in = reqsPerMin;
+                    }
+                }
+                else
+                {
+                    policy.expires_in = CONST.DEFAULT_REQUESTS_PER_MINUTE;
+                }
+
+
+                resolve(policy);
             }
             else
             {
                 policy = undefined;
-                
-                save_ticket.call(this, policy);
+
+                resolve(policy);
             }
-        }
-        else if (query_string.policy === CONST.POLICIES.BANDWIDTH_BASED)
-        {
-            policy.bandwidth_based = true;
-            
-            if (query_string.reqs_per_minute)
-            {
-                var reqsPerMin = parseInt(query_string.reqs_per_minute);
-                
-                if (isNaN(reqsPerMin))
-                {
-                    policy.expires_in = CONST.DEFAULT_REQUESTS_PER_MINUTE;
-                }
-                else
-                {
-                    policy.expires_in = reqsPerMin;
-                }
-            }
-            else
-            {
-                policy.expires_in = CONST.DEFAULT_REQUESTS_PER_MINUTE;
-            }
-            
-            
-            save_ticket.call(this, policy);
         }
         else
         {
-            policy = undefined;
-            
-            save_ticket.call(this, policy);
+            // Call the save_ticket function passing undefined:
+            reject();
         }
-    }
-    else
-    {
-        // Call the save_ticket function passing undefined:
-        save_ticket.call(this, undefined);
-    }
+    });
 }
 
 function createNewTicket()
@@ -530,223 +537,221 @@ exports.new = function(req, res)
 {
     client.select(REDIS_DB, function()
     {
-        calculateExpirationPolicy(req.query, function(policy)
+        var reply = {"result": CONST.NOT_OK};
+        
+        calculateExpirationPolicy(req.query)
+        .then(function(policy)
         {
-            var reply = {"result": CONST.NOT_OK};
-            
-            if (policy)
+            var count = 1;
+
+            if (req.query.count)
             {
-                var count = 1;
-            
-                if (req.query.count)
-                {
-                    count = req.query.count;
-                }
-                
-                if (count > CONST.MAX_TICKETS_PER_TIME)
-                {
-                    reply.cause = CONST.ERRORS.TOO_MUCH_TICKETS;
-                    reply.message = "Try lowering your 'count' request to <" + CONST.MAX_TICKETS_PER_TIME;
-                    
-                    res.status(400).send(reply);
-                }
-                else
-                {
-                    var tickets = [];
-                    
-                    reply.result = CONST.OK;
-                    reply.expires_in = policy.expires_in;
-                    
-                    for (var a=0; a<count; a++)
-                    {
-                        var ticket_base = createNewTicket();
-                        var valid_ticket   = CONST.VALID_PREFIX   + ticket_base;
-                        var expired_ticket = CONST.EXPIRED_PREFIX + ticket_base;
-                        
-                        if (policy.time_based)
-                        {
-                            if (count === 1)
-                            {
-                                // Early reply:
-                                reply.ticket = ticket_base;
-                                reply.policy = CONST.POLICIES.TIME_BASED;
-                                
-                                res.send(reply);
-                            }
-                            else
-                            {
-                                reply.policy = CONST.POLICIES.TIME_BASED;
-                                tickets[a] = ticket_base;
-                            }
-                            
-                            // First save the "real" ticket:
-                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
-                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
-                            client.expire(valid_ticket, policy.expires_in);
-                            
-                            // Then save the "to-be-expired" counterpart:
-                            client.set(expired_ticket, CONST.EXPIRED_TICKET);
-                            client.expire(expired_ticket, policy.remember_until);
-                            
-                            
-                            if (policy.context)
-                            {
-                                addToContextMap(policy.context, ticket_base);
-                            }
-                        }
-                        else if (policy.requests_based)
-                        {
-                            if (count === 1)
-                            {
-                                // Early reply:
-                                reply.ticket = ticket_base;
-                                reply.policy = CONST.POLICIES.REQUESTS_BASED;
-                                
-                                res.send(reply);
-                            }
-                            else
-                            {
-                                reply.policy = CONST.POLICIES.REQUESTS_BASED;
-                                tickets[a] = ticket_base;
-                            }
-                            
-                            // First save the "real" ticket:
-                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
-                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
-                            
-                            // Then save the "to-be-expired" counterpart:
-                            client.set(expired_ticket, CONST.EXPIRED_TICKET);
-                            client.expire(expired_ticket, policy.remember_until);
-                            
-                            
-                            if (policy.context)
-                            {
-                                addToContextMap(policy.context, ticket_base);
-                            }
-                        }
-                        else if (policy.manual_expiration)
-                        {
-                            if (count === 1)
-                            {
-                                // Early reply:
-                                reply.ticket = ticket_base;
-                                reply.policy = CONST.POLICIES.MANUAL_EXPIRATION;
-                                
-                                res.send(reply);
-                            }
-                            else
-                            {
-                                reply.policy = CONST.POLICIES.MANUAL_EXPIRATION;
-                                tickets[a] = ticket_base;
-                            }
-                            
-                            // Just save the ticket:
-                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
-                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
-                            
-                            
-                            if (policy.context)
-                            {
-                                addToContextMap(policy.context, ticket_base);
-                            }
-                        }
-                        else if (policy.cascading)
-                        {
-                            if (count === 1)
-                            {
-                                // Early reply:
-                                reply.ticket = ticket_base;
-                                reply.depends_on = policy.depends_on;
-                                reply.policy = CONST.POLICIES.CASCADING;
-                                
-                                res.send(reply);
-                            }
-                            else
-                            {
-                                reply.policy = CONST.POLICIES.CASCADING;
-                                tickets[a] = ticket_base;
-                            }
-                            
-                            // First save the "real" ticket:
-                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
-                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
-                            
-                            // Then save the "to-be-expired" counterpart:
-                            client.set(expired_ticket, CONST.EXPIRED_TICKET);
-                            client.expire(expired_ticket, policy.remember_until);
-                            
-                            
-                            if (policy.context)
-                            {
-                                addToContextMap(policy.context, ticket_base);
-                            }
-                        }
-                        else if (policy.bandwidth_based)
-                        {
-                            if (count === 1)
-                            {
-                                // Early reply:
-                                reply.ticket = ticket_base;
-                                reply.policy = CONST.POLICIES.BANDWIDTH_BASED;
-                                reply.requests_per_minute = policy.expires_in;
-                                
-                                res.send(reply);
-                            }
-                            else
-                            {
-                                reply.policy = CONST.POLICIES.BANDWIDTH_BASED;
-                                tickets[a] = ticket_base;
-                            }
-                            
-                            // Save the ticket WITHOUT the last-check time:
-                            client.hset(valid_ticket, "content", CONST.VALID_TICKET);
-                            client.hset(valid_ticket, "policy", JSON.stringify(policy));
-                            
-                            // No "to-be-expired" counterpart: bandwidth-based tickets never expire
-                            
-                            
-                            if (policy.context)
-                            {
-                                addToContextMap(policy.context, ticket_base);
-                            }
-                        }
-                        else
-                        {
-                            // Return an error:
-                            delete reply.expires_in;
-                            reply.result = CONST.NOT_OK;
-                            reply.cause = CONST.ERRORS.WRONG_POLICY;
-                            
-                            if (count === 1)
-                            {
-                                res.status(400).send(reply);
-                            }
-                            else
-                            {
-                                // Exit from the external "for":
-                                break;
-                            }
-                        }
-                    }
-                    
-                    if (count > 1)
-                    {
-                        if (reply.status !== CONST.NOT_OK)
-                        {
-                            reply.tickets = tickets;
-                        }
-                        
-                        res.send(reply);
-                    }
-                }
+                count = req.query.count;
+            }
+
+            if (count > CONST.MAX_TICKETS_PER_TIME)
+            {
+                reply.cause = CONST.ERRORS.TOO_MUCH_TICKETS;
+                reply.message = "Try lowering your 'count' request to <" + CONST.MAX_TICKETS_PER_TIME;
+
+                res.status(400).send(reply);
             }
             else
             {
-                // Return an error:
-                reply.cause = CONST.ERRORS.WRONG_POLICY;
-                
-                res.status(400).send(reply);
+                var tickets = [];
+
+                reply.result = CONST.OK;
+                reply.expires_in = policy.expires_in;
+
+                for (var a=0; a<count; a++)
+                {
+                    var ticket_base = createNewTicket();
+                    var valid_ticket   = CONST.VALID_PREFIX   + ticket_base;
+                    var expired_ticket = CONST.EXPIRED_PREFIX + ticket_base;
+
+                    if (policy.time_based)
+                    {
+                        if (count === 1)
+                        {
+                            // Early reply:
+                            reply.ticket = ticket_base;
+                            reply.policy = CONST.POLICIES.TIME_BASED;
+
+                            res.send(reply);
+                        }
+                        else
+                        {
+                            reply.policy = CONST.POLICIES.TIME_BASED;
+                            tickets[a] = ticket_base;
+                        }
+
+                        // First save the "real" ticket:
+                        client.hset(valid_ticket, "content", CONST.VALID_TICKET);
+                        client.hset(valid_ticket, "policy", JSON.stringify(policy));
+                        client.expire(valid_ticket, policy.expires_in);
+
+                        // Then save the "to-be-expired" counterpart:
+                        client.set(expired_ticket, CONST.EXPIRED_TICKET);
+                        client.expire(expired_ticket, policy.remember_until);
+
+
+                        if (policy.context)
+                        {
+                            addToContextMap(policy.context, ticket_base);
+                        }
+                    }
+                    else if (policy.requests_based)
+                    {
+                        if (count === 1)
+                        {
+                            // Early reply:
+                            reply.ticket = ticket_base;
+                            reply.policy = CONST.POLICIES.REQUESTS_BASED;
+
+                            res.send(reply);
+                        }
+                        else
+                        {
+                            reply.policy = CONST.POLICIES.REQUESTS_BASED;
+                            tickets[a] = ticket_base;
+                        }
+
+                        // First save the "real" ticket:
+                        client.hset(valid_ticket, "content", CONST.VALID_TICKET);
+                        client.hset(valid_ticket, "policy", JSON.stringify(policy));
+
+                        // Then save the "to-be-expired" counterpart:
+                        client.set(expired_ticket, CONST.EXPIRED_TICKET);
+                        client.expire(expired_ticket, policy.remember_until);
+
+
+                        if (policy.context)
+                        {
+                            addToContextMap(policy.context, ticket_base);
+                        }
+                    }
+                    else if (policy.manual_expiration)
+                    {
+                        if (count === 1)
+                        {
+                            // Early reply:
+                            reply.ticket = ticket_base;
+                            reply.policy = CONST.POLICIES.MANUAL_EXPIRATION;
+
+                            res.send(reply);
+                        }
+                        else
+                        {
+                            reply.policy = CONST.POLICIES.MANUAL_EXPIRATION;
+                            tickets[a] = ticket_base;
+                        }
+
+                        // Just save the ticket:
+                        client.hset(valid_ticket, "content", CONST.VALID_TICKET);
+                        client.hset(valid_ticket, "policy", JSON.stringify(policy));
+
+
+                        if (policy.context)
+                        {
+                            addToContextMap(policy.context, ticket_base);
+                        }
+                    }
+                    else if (policy.cascading)
+                    {
+                        if (count === 1)
+                        {
+                            // Early reply:
+                            reply.ticket = ticket_base;
+                            reply.depends_on = policy.depends_on;
+                            reply.policy = CONST.POLICIES.CASCADING;
+
+                            res.send(reply);
+                        }
+                        else
+                        {
+                            reply.policy = CONST.POLICIES.CASCADING;
+                            tickets[a] = ticket_base;
+                        }
+
+                        // First save the "real" ticket:
+                        client.hset(valid_ticket, "content", CONST.VALID_TICKET);
+                        client.hset(valid_ticket, "policy", JSON.stringify(policy));
+
+                        // Then save the "to-be-expired" counterpart:
+                        client.set(expired_ticket, CONST.EXPIRED_TICKET);
+                        client.expire(expired_ticket, policy.remember_until);
+
+
+                        if (policy.context)
+                        {
+                            addToContextMap(policy.context, ticket_base);
+                        }
+                    }
+                    else if (policy.bandwidth_based)
+                    {
+                        if (count === 1)
+                        {
+                            // Early reply:
+                            reply.ticket = ticket_base;
+                            reply.policy = CONST.POLICIES.BANDWIDTH_BASED;
+                            reply.requests_per_minute = policy.expires_in;
+
+                            res.send(reply);
+                        }
+                        else
+                        {
+                            reply.policy = CONST.POLICIES.BANDWIDTH_BASED;
+                            tickets[a] = ticket_base;
+                        }
+
+                        // Save the ticket WITHOUT the last-check time:
+                        client.hset(valid_ticket, "content", CONST.VALID_TICKET);
+                        client.hset(valid_ticket, "policy", JSON.stringify(policy));
+
+                        // No "to-be-expired" counterpart: bandwidth-based tickets never expire
+
+
+                        if (policy.context)
+                        {
+                            addToContextMap(policy.context, ticket_base);
+                        }
+                    }
+                    else
+                    {
+                        // Return an error:
+                        delete reply.expires_in;
+                        reply.result = CONST.NOT_OK;
+                        reply.cause = CONST.ERRORS.WRONG_POLICY;
+
+                        if (count === 1)
+                        {
+                            res.status(400).send(reply);
+                        }
+                        else
+                        {
+                            // Exit from the external "for":
+                            break;
+                        }
+                    }
+                }
+
+                if (count > 1)
+                {
+                    if (reply.status !== CONST.NOT_OK)
+                    {
+                        reply.tickets = tickets;
+                    }
+
+                    res.send(reply);
+                }
             }
+        })
+        .catch(function()
+        {
+            // Return an error:
+            reply.cause = CONST.ERRORS.WRONG_POLICY;
+
+            res.status(400).send(reply);
         });
     });
 };
@@ -757,7 +762,7 @@ exports.status = function(req, res)
     {
         var reply = {"status": CONST.ERROR};
         
-        var ticket_base = req.param("ticket");
+        var ticket_base = req.params.ticket;
         
         if (ticket_base)
         {
@@ -875,7 +880,7 @@ exports.expire = function(req, res)
     {
         var reply = {"status": CONST.ERROR};
         
-        var ticket_base = req.param("ticket");
+        var ticket_base = req.params.ticket;
         
         if (ticket_base)
         {

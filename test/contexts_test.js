@@ -41,7 +41,7 @@ exports.read =
     },
     'Contexts route': function(test)
     {
-        test.expect(9);
+        test.expect(14);
         
         var context = "nonexistentcontext";
         
@@ -49,15 +49,15 @@ exports.read =
         {
             test.ifError(err);
             
-            test.equal(res.statusCode, 200);
+            test.equal(res.statusCode, 404);
             
             var result = JSON.parse(res.body);
             
-            test.equal(result.status, CONST.OK);
-            test.equal(result.cause, CONST.ERRORS.EMPTY_CONTEXT);
+            test.equal(result.status, CONST.NOT_OK);
+            test.equal(result.cause, CONST.ERRORS.CONTEXT_NOT_FOUND);
             
             
-            request.get('http://localhost:8124/contexts//expireall', function(err2, res2)
+            request.get('http://localhost:8124/contexts/expireall', function(err2, res2)
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 404);
@@ -67,13 +67,39 @@ exports.read =
                     test.ifError(err3);
 
                     test.equal(res3.statusCode, 200);
+                    
+                    console.log(res3.body);
 
                     result = JSON.parse(res3.body);
                     
                     test.deepEqual(result.expired, 1);
                     
                     
-                    test.done();
+                    request.get('http://localhost:8124/tickets/new?policy=manual_expiration&context=' + existingContext, function(err4)
+                    {
+                        test.ifError(err4);
+                        
+                        request.get('http://localhost:8124/tickets/new?policy=manual_expiration&context=' + existingContext, function(err5)
+                        {
+                            test.ifError(err5);
+                            
+                            request.get('http://localhost:8124/contexts/' + existingContext + '/expireall', function(err6, res6)
+                            {
+                                test.ifError(err6);
+
+                                test.equal(res6.statusCode, 200);
+
+                                console.log(res6.body);
+
+                                result = JSON.parse(res6.body);
+
+                                test.deepEqual(result.expired, 2);
+
+
+                                test.done();
+                            });
+                        });
+                    });
                 });
             });
         });

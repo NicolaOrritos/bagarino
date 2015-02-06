@@ -4,110 +4,126 @@
 var redis = require('redis');
 var CONST = require('../lib/const');
 
+var P     = global.Promise || require('bluebird');
+
+
 var client = redis.createClient();
 
-client.on("error", function (err)
+client.on('error', function (err)
 {
-    global.log.error("Got an error from the Redis client: " + err);
+    global.log.error('Got an error from the Redis client: ' + err);
 });
 
 var REDIS_DB = 3;
 
 
-function removeTicket(context, ticket, metacallback)
+function removeTicket(context, ticket)
 {
-    if (ticket && context)
+    return new P(function(resolve, reject)
     {
-        console.log("Removing ticket '%s' from context '%s'...", (CONST.VALID_PREFIX + ticket), context);
-        
-        client.hget(CONST.VALID_PREFIX + ticket, "policy", function(error, policy_str)
+        if (ticket && context)
         {
-            if (policy_str)
+            console.log('Removing ticket "%s" from context "%s"...', (CONST.VALID_PREFIX + ticket), context);
+
+            client.hget(CONST.VALID_PREFIX + ticket, 'policy', function(error, policy_str)
             {
-                var policy = JSON.parse(policy_str);
-                
-                if (policy.manual_expiration === true
-                    || policy.can_force_expiration === true)
+                if (policy_str)
                 {
-                    // Save the "expired" counterpart when manually expiring:
-                    client.set(CONST.EXPIRED_PREFIX + ticket, CONST.EXPIRED_TICKET);
-                    client.expire(CONST.EXPIRED_PREFIX + ticket, policy.remember_until);
-                    
-                    // Finally delete valid ticket
-                    client.del(CONST.VALID_PREFIX + ticket);
-                    
-                    client.lrem(context, "1", ticket, function(err, removed)
+                    var policy = JSON.parse(policy_str);
+
+                    if (   policy.manual_expiration === true
+                        || policy.can_force_expiration === true)
                     {
-                        if (err)
-                        {
-                            console.log("Could not remove ticket '%s' from context map '%s'. Cause: %s", ticket, context, err);
-                        }
-                        else if (removed)
-                        {
-                            console.log("Removed '%s' ticket(s)", removed);
-                            
-                            metacallback(true);
-                        }
-                        else
-                        {
-                            metacallback(false);
-                        }
-                    });
-                }
-                else
-                {
-                    metacallback(false);
-                }
-            }
-            else
-            {
-                // Malformed ticket in the DB: delete
-                client.del(CONST.VALID_PREFIX + ticket, function(err)
-                {
-                    if (err)
-                    {
-                        console.log("Could not delete supposedly-malformed ticket. Cause: %s", err);
-                    }
-                    
-                    client.del(CONST.EXPIRED_PREFIX + ticket, function(err2)
-                    {
-                        if (err2)
-                        {
-                            console.log("Could not fully delete supposedly-malformed ticket. Cause: %s", err2);
-                        }
-                        
-                        client.lrem(context, "1", ticket, function(err, removed)
+                        // Save the 'expired' counterpart when manually expiring:
+                        client.set(CONST.EXPIRED_PREFIX + ticket, CONST.EXPIRED_TICKET);
+                        client.expire(CONST.EXPIRED_PREFIX + ticket, policy.remember_until);
+
+                        // Finally delete valid ticket
+                        client.del(CONST.VALID_PREFIX + ticket);
+
+                        client.lrem(context, '1', ticket, function(err, removed)
                         {
                             if (err)
                             {
-                                console.log("Could not remove supposedly-malformed ticket '%s' from context map '%s'. Cause: %s", ticket, context, err);
+                                console.log('Could not remove ticket "%s" from context map "%s". Cause: %s', ticket, context, err);
+
+                                reject(err);
                             }
                             else if (removed)
                             {
-                                console.log("Removed '%s' supposedly-malformed ticket(s) from context-map", removed);
+                                console.log('Removed "%s" ticket(s)', removed);
 
-                                metacallback(true);
+                                resolve(true);
                             }
                             else
                             {
-                                metacallback(false);
+                                resolve(false);
                             }
                         });
+                    }
+                    else
+                    {
+                        resolve(false);
+                    }
+                }
+                else
+                {
+                    // Malformed ticket in the DB: delete
+                    client.del(CONST.VALID_PREFIX + ticket, function(err)
+                    {
+                        if (err)
+                        {
+                            console.log('Could not delete supposedly-malformed ticket. Cause: %s', err);
+                            
+                            reject(err);
+                        }
+
+                        client.del(CONST.EXPIRED_PREFIX + ticket, function(err2)
+                        {
+                            if (err2)
+                            {
+                                console.log('Could not fully delete supposedly-malformed ticket. Cause: %s', err2);
+                                
+                                reject(err2);
+                            }
+
+                            client.lrem(context, '1', ticket, function(err3, removed)
+                            {
+                                if (err3)
+                                {
+                                    console.log('Could not remove supposedly-malformed ticket "%s" from context map "%s". Cause: %s', ticket, context, err3);
+
+                                    reject(err3);
+                                }
+                                else if (removed)
+                                {
+                                    console.log('Removed "%s" supposedly-malformed ticket(s) from context-map', removed);
+
+                                    resolve(true);
+                                }
+                                else
+                                {
+                                    resolve(false);
+                                }
+                            });
+                        });
                     });
-                });
-                
-                metacallback(false);
-            }
-        });
-    }
+                }
+            });
+        }
+        else
+        {
+            reject();
+        }
+    });
 }
 
 
 exports.expireall = function(req, res)
 {
-    var reply = {"status": CONST.ERROR};
+    var reply = {'status': CONST.ERROR};
     
-    var context = req.param("context");
+    var context = req.params.context;
     
     if (context)
     {
@@ -115,33 +131,11 @@ exports.expireall = function(req, res)
         
         client.select(REDIS_DB, function()
         {
-            client.lrange(context, "0", "-1", function(err, tickets)
+            client.lrange(context, '0', '-1', function(err, tickets)
             {
-                var processed    = 0;
-                var deletedCount = 0;
-
-                function metacallback(deleted)
-                {
-                    processed++;
-
-                    if (deleted)
-                    {
-                        deletedCount++;
-                    }
-
-                    if (processed === tickets.length)
-                    {
-                        reply.status = CONST.OK;
-                        reply.expired = deletedCount;
-
-                        res.send(reply);
-                    }
-                }
-                
-                
                 if (err)
                 {
-                    console.log("Error when retrieving tickets for context '%s': %s", context, err);
+                    console.log('Error when retrieving tickets for context "%s": %s', context, err);
                     
                     reply.status = CONST.ERROR;
                     reply.cause = err;
@@ -152,19 +146,36 @@ exports.expireall = function(req, res)
                 {
                     if (tickets.length > 0)
                     {
-                        for (var a=0; a<tickets.length; a++)
+                        P.map(tickets, function(ticket)
                         {
-                            var ticket = tickets[a];
+                            return removeTicket(context, ticket);
+                        })
+                        .then(function(deleted)
+                        {
+                            console.log('Mapped');
                             
-                            removeTicket(context, ticket, metacallback);
-                        }
+                            var deletedCount = 0;
+                            
+                            for (var a=0; a<deleted.length; a++)
+                            {
+                                if (deleted[a])
+                                {
+                                    deletedCount++;
+                                }
+                            }
+
+                            reply.status = CONST.OK;
+                            reply.expired = deletedCount;
+
+                            res.send(reply);
+                        });
                     }
                     else
                     {
-                        reply.status = CONST.OK;
-                        reply.cause = CONST.ERRORS.EMPTY_CONTEXT;
+                        reply.status = CONST.NOT_OK;
+                        reply.cause = CONST.ERRORS.CONTEXT_NOT_FOUND;
         
-                        res.send(reply);
+                        res.status(404).send(reply);
                     }
                 }
             });
