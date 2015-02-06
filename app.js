@@ -53,7 +53,8 @@ var app = express();
 
 app.set('port', CONF.PORT);
 app.use(morgan('dev'));
-app.use(bodyParser());
+app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.json());
 app.use(methodOverride());
 
 if ('development' === app.get('env'))
