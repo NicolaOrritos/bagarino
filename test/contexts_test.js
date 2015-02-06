@@ -68,11 +68,9 @@ exports.read =
 
                     test.equal(res3.statusCode, 200);
                     
-                    console.log(res3.body);
-
                     result = JSON.parse(res3.body);
                     
-                    test.deepEqual(result.expired, 1);
+                    test.strictEqual(result.expired, 1);
                     
                     
                     request.get('http://localhost:8124/tickets/new?policy=manual_expiration&context=' + existingContext, function(err4)
@@ -89,11 +87,9 @@ exports.read =
 
                                 test.equal(res6.statusCode, 200);
 
-                                console.log(res6.body);
-
                                 result = JSON.parse(res6.body);
 
-                                test.deepEqual(result.expired, 2);
+                                test.strictEqual(result.expired, 2);
 
 
                                 test.done();

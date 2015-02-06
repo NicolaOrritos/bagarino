@@ -23,8 +23,6 @@ function removeTicket(context, ticket)
     {
         if (ticket && context)
         {
-            console.log('Removing ticket "%s" from context "%s"...', (CONST.VALID_PREFIX + ticket), context);
-
             client.hget(CONST.VALID_PREFIX + ticket, 'policy', function(error, policy_str)
             {
                 if (policy_str)
@@ -49,15 +47,9 @@ function removeTicket(context, ticket)
 
                                 reject(err);
                             }
-                            else if (removed)
-                            {
-                                console.log('Removed "%s" ticket(s)', removed);
-
-                                resolve(true);
-                            }
                             else
                             {
-                                resolve(false);
+                                resolve(removed);
                             }
                         });
                     }
@@ -95,15 +87,9 @@ function removeTicket(context, ticket)
 
                                     reject(err3);
                                 }
-                                else if (removed)
-                                {
-                                    console.log('Removed "%s" supposedly-malformed ticket(s) from context-map', removed);
-
-                                    resolve(true);
-                                }
                                 else
                                 {
-                                    resolve(false);
+                                    resolve(removed);
                                 }
                             });
                         });
@@ -150,20 +136,27 @@ exports.expireall = function(req, res)
                         {
                             return removeTicket(context, ticket);
                         })
-                        .then(function(deleted)
+                        .reduce(function(total, deleted)
                         {
-                            console.log('Mapped');
-                            
-                            var deletedCount = 0;
-                            
-                            for (var a=0; a<deleted.length; a++)
+                            if (deleted)
                             {
-                                if (deleted[a])
-                                {
-                                    deletedCount++;
-                                }
+                                total++;
                             }
-
+                            
+                            return total;
+                        })
+                        .then(function(deletedCount)
+                        {
+                            // When only one ticket is processed, 'reduce' gets skipped...
+                            if (deletedCount === true)
+                            {
+                                deletedCount = 1;
+                            }
+                            else if (deletedCount === false)
+                            {
+                                deletedCount = 0;
+                            }
+                            
                             reply.status = CONST.OK;
                             reply.expired = deletedCount;
 
