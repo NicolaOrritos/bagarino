@@ -2,25 +2,15 @@
 // [todo] - Tune logging subsystem and use it thoroughly
 
 
-/*
- * REQUIRES
- */
-var fs             = require("fs");
-var http           = require("http");
-var https          = require("https");
-var cluster        = require("cluster");
-var express        = require("express");
-var morgan         = require('morgan');
-var bodyParser     = require('body-parser');
-var methodOverride = require('method-override');
-var sjl            = require("sjl");
-var Log            = require("log");
+var fs      = require("fs");
+var cluster = require("cluster");
+var restify = require("restify");
+var sjl     = require("sjl");
+var Log     = require("log");
 
 
-/*
- * DEFAULT CONFIGURATION
- */
-var defaults = {
+var defaults =
+{
     "ENVIRONMENT": "production",
 
     "PORT": 8124,
@@ -46,22 +36,10 @@ var defaults = {
 var CONF = sjl("/etc/bagarino.conf", defaults);
 
 
-/*
- * EXPRESS INITIALIZATION
- */
-var app = express();
-
-app.set('port', CONF.PORT);
-app.use(morgan('dev'));
-app.use(bodyParser.urlencoded({extended: true}));
-app.use(bodyParser.json());
-app.use(methodOverride());
-
-if ('development' === app.get('env'))
+// Initialize logging
+if ('development' === CONF.ENVIRONMENT)
 {
-    app.locals.pretty = true;
-
-    // Let logs go to stdout
+    // Let's log to stdout
     global.log = new Log("debug");
 }
 else
@@ -70,41 +48,59 @@ else
 }
 
 
-/*
- * ROUTES BINDING
- */
-var routes = {
-    'tickets' :   require('./routes/tickets'),
-    'contexts':   require('./routes/contexts')
+var routes =
+{
+    'tickets' : require('./lib/tickets'),
+    'contexts': require('./lib/contexts')
 };
 
-app.get('/tickets/new',                 routes.tickets.new);
-app.get('/tickets/:ticket/status',      routes.tickets.status);
-app.get('/tickets/:ticket/expire',      routes.tickets.expire);
-app.get('/contexts/:context/expireall', routes.contexts.expireall);
+function initAndStart(server, port)
+{
+    if (server && port)
+    {
+        server.use(restify.queryParser());
+        
+        server.get('/tickets/new',                 routes.tickets.new);
+        server.get('/tickets/:ticket/status',      routes.tickets.status);
+        server.get('/tickets/:ticket/expire',      routes.tickets.expire);
+        server.get('/contexts/:context/expireall', routes.contexts.expireall);
 
+        server.listen(port, function()
+        {
+            // Drop privileges if we are running as root
+            if (process.getgid() === 0)
+            {
+                process.setgid("nobody");
+                process.setuid("nobody");
+            }
 
-/*
- * START ALL
- */
-var server;
+            global.log.info("BAGARINO server listening on port %d in %s mode [worker is %s]",
+                            port,
+                            CONF.ENVIRONMENT,
+                            cluster.worker.id);
+        });
+        
+        // Gracefully handle SIGTERM
+        process.on("SIGTERM", function()
+        {
+            server.close(function()
+            {
+                // Disconnect from cluster master
+                if (process.disconnect)
+                {
+                    process.disconnect();
+                }
+            });
+        });
+    }
+}
+
 
 if (CONF.SERVER_TYPE.HTTP.ENABLED)
 {
-    server = http.createServer(app).listen(CONF.PORT, function()
-    {
-        // Drop privileges if we are running as root
-        if (process.getgid() === 0)
-        {
-            process.setgid("nobody");
-            process.setuid("nobody");
-        }
+    var server = restify.createServer();
 
-        global.log.info("BAGARINO HTTP server listening on port %d in %s mode [worker is %s]",
-                        CONF.PORT,
-                        app.settings.env,
-                        cluster.worker.id);
-    });
+    initAndStart(server, CONF.PORT);
 }
 
 if (CONF.SERVER_TYPE.HTTPS.ENABLED)
@@ -112,41 +108,10 @@ if (CONF.SERVER_TYPE.HTTPS.ENABLED)
     var privateKey  = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.KEY,  "utf8");
     var certificate = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.CERT, "utf8");
 
-    var credentials = {key: privateKey, cert: certificate};
+    var credentials = {key: privateKey, certificate: certificate};
 
-    server = https.createServer(credentials, app).listen(CONF.HTTPS_PORT, function()
-    {
-        // Drop privileges if we are running as root
-        if (process.getgid() === 0)
-        {
-            process.setgid("nobody");
-            process.setuid("nobody");
-        }
+    var httpsServer = restify.createServer(credentials);
 
-        global.log.info("BAGARINO HTTPS server listening on port %d in %s mode [worker is %s]",
-                        CONF.HTTPS_PORT,
-                        app.settings.env,
-                        cluster.worker.id);
-    });
+    initAndStart(httpsServer, CONF.HTTPS_PORT);
 }
 
-
-/*
- * PROCESS SIGTERM HANDLING
- */
-
-// Gracefully handle SIGTERM
-process.on("SIGTERM", function()
-{
-    if (server)
-    {
-        server.close(function()
-        {
-            // Disconnect from cluster master
-            if (process.disconnect)
-            {
-                process.disconnect();
-            }
-        });
-    }
-});

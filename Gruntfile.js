@@ -42,10 +42,6 @@ module.exports = function (grunt)
             {
                 src: ['bin/start-bagarino-daemon*', './app.js']
             },
-            routes:
-            {
-                src: ['routes/**/*.js']
-            },
             test:
             {
                 src: ['test/**/*.js']
@@ -59,7 +55,7 @@ module.exports = function (grunt)
                 },
                 
                 files: {
-                    'reports': ['bin/**/*.js', 'lib/**/*.js', 'routes/**/*.js']
+                    'reports': ['bin/**/*.js', 'lib/**/*.js']
                 }
             }
         },
@@ -78,8 +74,7 @@ module.exports = function (grunt)
             server: {
                 files: [
                     'bin/start-bagarino-daemon_dev',
-                    './app.js',
-                    'routes/*.js'
+                    './app.js'
                 ],
                 tasks: ['develop', 'delayed-livereload']
             }
