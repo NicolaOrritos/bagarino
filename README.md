@@ -197,13 +197,13 @@ After asking 9 times for this ticket validity here's what happens asking one mor
 	http://localhost:8124/tickets/0cca33a81e4ce168f218d74692e096c676af2a25/status
 	200 OK {"status":"VALID","expires_in":0,"policy":"requests_based","next_ticket":"c7433c48f56bd224de43b232657165842609690b"}
 
-A new ticket, _c7433c48f56bd224de43b232657165842609690b_, is born, right when the old one expires and with the same policy and initial TTL.
+A new ticket, _c7433c48f56bd224de43b232657165842609690b_, is born, right when the old one expires and with the same policy and initial TTL (i.e. 10 requests).
 
 
 
 LICENSE - Apache License v2
 ---------------------------
-Copyright (c) 2014 Nicola Orritos
+Copyright (c) 2015 Nicola Orritos
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use these files except in compliance with the License.

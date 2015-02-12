@@ -61,16 +61,14 @@ function initAndStart(server, port)
     {
         server.use(restify.queryParser());
         
-        server.get('/tickets/new',                  routes.tickets.new);
-        server.get('/tickets/:ticket/status',       routes.tickets.status);
-        server.get('/tickets/:ticket/expire',       routes.tickets.expire);
-        server.get('/contexts/:context/expireall',  routes.contexts.expireall);
+        server.get('/tickets/new',                 routes.tickets.new);
+        server.get('/tickets/:ticket/status',      routes.tickets.status);
+        server.get('/tickets/:ticket/expire',      routes.tickets.expire);
+        server.get('/contexts/:context/expireall', routes.contexts.expireall);
         
-        server.get('/contexts/:context/:wrongverb', routes.utils.notpermitted);
-        server.get('/contexts/:context',            routes.utils.notpermitted);
-        server.get('/tickets/:ticket/:wrongverb',   routes.utils.notpermitted);
-        server.get('/tickets/:ticket',              routes.utils.notpermitted);
-        server.get('/tickets',                      routes.utils.notpermitted);
+        server.on ('NotFound',                     routes.utils.notpermitted);
+        server.on ('MethodNotAllowed',             routes.utils.notpermitted);
+        server.on ('uncaughtException',            routes.utils.notpermitted);
 
         server.listen(port, function()
         {
