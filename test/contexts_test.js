@@ -33,13 +33,61 @@ exports.read =
         {
             if (err)
             {
-                console.log('Error setting up the test: %s', err);
+                console.log('Error setting the test up: %s', err);
+            }
+
+            done();
+        });
+    },
+    
+    tearDown: function(done)
+    {
+        // Cleanup the context:
+        request.get('http://localhost:8124/contexts/' + existingContext + '/expireall', function(err)
+        {
+            if (err)
+            {
+                console.log('Error tearing the test down: %s', err);
             }
             
             done();
         });
     },
-    'Contexts route': function(test)
+    
+    'Contexts wrong routes': function(test)
+    {
+        test.expect(8);
+        
+        var context = existingContext;
+        
+        request.get('http://localhost:8124/contexts/' + context, function(err, res)
+        {
+            test.ifError(err);
+            
+            test.equal(res.statusCode, 400);
+            
+            var result = JSON.parse(res.body);
+            
+            test.equal(result.status, CONST.ERROR);
+            test.equal(result.cause, CONST.ERRORS.MALFORMED_REQUEST);
+            
+            
+            request.get('http://localhost:8124/contexts/' + context + '/wrongoperation', function(err2, res2)
+            {
+                test.ifError(err2);
+                test.equal(res2.statusCode, 400);
+            
+                result = JSON.parse(res2.body);
+
+                test.equal(result.status, CONST.ERROR);
+                test.equal(result.cause, CONST.ERRORS.MALFORMED_REQUEST);
+                
+                test.done();
+            });
+        });
+    },
+    
+    'Contexts route usage': function(test)
     {
         test.expect(14);
         
@@ -60,7 +108,7 @@ exports.read =
             request.get('http://localhost:8124/contexts/expireall', function(err2, res2)
             {
                 test.ifError(err2);
-                test.equal(res2.statusCode, 404);
+                test.equal(res2.statusCode, 400);
                 
                 request.get('http://localhost:8124/contexts/' + existingContext + '/expireall', function(err3, res3)
                 {
