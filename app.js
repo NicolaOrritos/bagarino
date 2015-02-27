@@ -90,11 +90,8 @@ function initAndStart(server, port)
         {
             server.close(function()
             {
-                // Disconnect from cluster master
-                if (process.disconnect)
-                {
-                    process.disconnect();
-                }
+                // Exit after server is closed
+                process.exit();
             });
         });
     }
