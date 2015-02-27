@@ -8,9 +8,10 @@
   },
   "bin": "bin/start-bagarino-daemon",
   "dependencies": {
-    "bluebird": "^2.9.6",
+    "bluebird": "^2.9.13",
     "daemon": "~1.1.0",
-    "hiredis": "~0.1.17",
+    "hashids": "^1.0.1",
+    "hiredis": "^0.2.0",
     "log": "~1.4.0",
     "node_hash": "~0.2.0",
     "redis": "^0.10.3",
