@@ -29,9 +29,10 @@ exports.read =
     {
         done();
     },
-    'Tickets route - Part 2': function(test)
+    
+    'Tickets generation speeds': function(test)
     {
-        test.expect(11);
+        test.expect(12);
         
         var seconds = 2;
         
@@ -45,39 +46,46 @@ exports.read =
             var result = JSON.parse(res.body);
             
             test.equal(result.result, CONST.OK);
-            test.ok(result.expires_in > (seconds / 2));
             
             var ticket = result.ticket;
             
             test.ok(ticket);
             
             
-            request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err2, res2)
+            genspeed = CONST.SPEED.FAST;
+            
+            request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=' + seconds + '&generation_speed=' + genspeed, function(err2, res2)
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 200);
 
                 result = JSON.parse(res2.body);
 
-                test.equal(result.status, CONST.VALID_TICKET);
+                test.equal(result.result, CONST.OK);
+                
+                ticket = result.ticket;
+            
+                test.ok(ticket);
                 
                 
-                setTimeout(function()
+                genspeed = CONST.SPEED.SLOW;
+                
+                request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=' + seconds + '&generation_speed=' + genspeed, function(err3, res3)
                 {
-                    request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err3, res3)
-                    {
-                        test.ifError(err3);
-                        test.equal(res3.statusCode, 200);
+                    test.ifError(err3);
+                    test.equal(res3.statusCode, 200);
 
-                        result = JSON.parse(res3.body);
+                    result = JSON.parse(res3.body);
 
-                        test.equal(result.status, CONST.EXPIRED_TICKET);
-                        
-                        
-                        test.done();
-                    });
-                    
-                }, (seconds * 1000));
+                    test.equal(result.result, CONST.OK);
+
+                    ticket = result.ticket;
+
+                    test.ok(ticket);
+
+
+                    test.done();
+                });
             });
         });
     }
