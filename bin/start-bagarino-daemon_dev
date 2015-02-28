@@ -105,7 +105,7 @@ function killAllWorkers(signal)
 process.on("SIGHUP", function()
 {
     killAllWorkers("SIGTERM");
-    createWorkers(cpus);
+    createWorkers(1);
 });
 
 /**
