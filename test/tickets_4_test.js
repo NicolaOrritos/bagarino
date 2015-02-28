@@ -49,8 +49,6 @@ exports.read =
             
             var ticket = result.ticket;
             
-            console.log('Ticket: %s', ticket);
-            
             test.ok(ticket);
             
             
