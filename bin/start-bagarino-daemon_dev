@@ -24,9 +24,6 @@ var CONF = sjl("/etc/bagarino.conf", defaults);
 process.env["NODE_ENV"] = CONF.ENVIRONMENT;
 
 
-// Number of CPUs
-var cpus = require("os").cpus().length;
-
 function workerExitRoutine(code, signal)
 {
     if (code !== 0 || (signal && signal !== 'SIGTERM'))
@@ -121,4 +118,4 @@ process.on("SIGTERM", function()
 
 
 // Create a child for each CPU
-createWorkers(cpus);
+createWorkers(1);
