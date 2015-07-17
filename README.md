@@ -200,6 +200,32 @@ After asking 9 times for this ticket validity here's what happens asking one mor
 A new ticket, _c7433c48f56bd224de43b232657165842609690b_, is born, right when the old one expires and with the same policy and initial TTL (i.e. 10 requests).
 
 
+### Garbage Collection
+Under some circumstances it may happen that one or more tickets become _stale_ and continue to be tracked by bagarino even if they aren't active anymore.  
+A command-line switch can be used to remove them all at once, but pay attention to some potential issues:
+- stale tickets can't be recovered after they got deleted by a garbage collection
+- a big number of stale tickets (> 100K) may cause the garbage collection to degrade bagarino performances until the cleanup ends
+
+Here's the command-line that activates the garbage collection:
+```Bash
+bagarino gc
+```
+
+Or:
+```Bash
+bagarino gcv
+```
+
+The latter is much (very much!) verbose, reporting progress for every stale ticket being deleted, so be careful when using it.
+
+Here's an example response from `bagarino gc`:
+```Bash
+Starting garbage collection...
+Got 12 key(s) to analyze...
+Garbage Collection performed correctly.
+1 stale ticket(s) cleaned.
+```
+
 
 LICENSE - Apache License v2
 ---------------------------

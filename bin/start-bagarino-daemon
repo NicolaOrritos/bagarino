@@ -32,7 +32,7 @@ if (cmd && (cmd['gc'] || cmd['gcv']))
     .then(function(count)
     {
         console.log('Garbage Collection performed correctly.');
-        console.log('%s stale tickets cleaned.', count);
+        console.log('%s stale ticket(s) cleaned.', count);
     })
     .catch(function(err)
     {
