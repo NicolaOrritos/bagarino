@@ -5,117 +5,158 @@
  */
 
 
-// We don't fork, hence we simulate the daemon without the daemon :)
-// require("daemon")();
+// Parsing some options:
+var docopt   = require('docopt').docopt;
 
 
-var cluster = require("cluster");
-var fs = require('fs');
+var options = 'Start the bagarino daemon or perform a Garbage Collection of stale tickets \n'
+            + ' \n'
+            + 'Usage: \n'
+            + '  bagarino [gc | gcv] \n'
+            + '  bagarino -h | --help \n'
+            + ' \n'
+            + 'Options: \n'
+            + '  gc          Perform a Garbage Collection of stale tickets \n'
+            + '  gcv         Perform Garbage Collection and be verbose about it \n'
+            + '  --h --help  Show this help \n';
 
-console.log("Starting bagarino daemon...");
+var cmd = docopt(options);
 
-
-// Load and apply some bare-bones config:
-var sjl = require("sjl");
-
-var defaults = {"ENVIRONMENT": "development"};
-var CONF = sjl("/etc/bagarino.conf", defaults);
-
-process.env["NODE_ENV"] = CONF.ENVIRONMENT;
-
-
-function workerExitRoutine(code, signal)
+if (cmd && (cmd['gc'] || cmd['gcv']))
 {
-    if (code !== 0 || (signal && signal !== 'SIGTERM'))
-    {
-        console.log("Worker '%s' died with code '%d' and signal '%s' :(", this.id, code, signal);
-        console.log("Restarting it...");
+    var gc = require('../lib/gc.js');
 
+    var verbose = cmd['gcv'] ? true : false;
 
-        // Replace the dead worker, we're not sentimental
-        var worker = cluster.fork();
-        
-        worker.on("exit", workerExitRoutine);
-    }
-    else
+    gc.run(verbose)
+    .then(function(count)
     {
-        console.log("Worker '%s' gracefully shut down with code '%d' :)", this.id, code);
-    }
+        console.log('Garbage Collection performed correctly.');
+        console.log('%s stale ticket(s) cleaned.', count);
+    })
+    .catch(function(err)
+    {
+        console.log('Could not perform Garbage Collection. %s', err.stack);
+    })
+    .finally(function()
+    {
+        process.exit();
+    });
 }
-
-/**
- * Creates the children workers when running as cluster master.
- * Runs the HTTP server otherwise.
- * 
- * @param  {Number} count Number of workers to create.
- */
-function createWorkers(count)
+else
 {
-    if (cluster.isMaster)
+    // We don't fork, hence we simulate the daemon without the daemon :)
+    // require("daemon")();
+
+
+    var cluster = require("cluster");
+    var fs = require('fs');
+
+    console.log("Starting bagarino daemon...");
+
+
+    // Load and apply some bare-bones config:
+    var sjl = require("sjl");
+
+    var defaults = {"ENVIRONMENT": "development"};
+    var CONF = sjl("/etc/bagarino.conf", defaults);
+
+    process.env["NODE_ENV"] = CONF.ENVIRONMENT;
+
+
+    var workerExitRoutine = function(code, signal)
     {
-        // Write the PID file:
-        var pid = process.pid.toString();
-        
-        fs.writeFile("./logs/bagarino.pid", pid, function(err)
+        if (code !== 0 || (signal && signal !== 'SIGTERM'))
         {
-            if (err)
+            console.log("Worker '%s' died with code '%d' and signal '%s' :(", this.id, code, signal);
+            console.log("Restarting it...");
+
+
+            // Replace the dead worker, we're not sentimental
+            var worker = cluster.fork();
+
+            worker.on("exit", workerExitRoutine);
+        }
+        else
+        {
+            console.log("Worker '%s' gracefully shut down with code '%d' :)", this.id, code);
+        }
+    };
+
+    /**
+     * Creates the children workers when running as cluster master.
+     * Runs the HTTP server otherwise.
+     *
+     * @param  {Number} count Number of workers to create.
+     */
+    var createWorkers = function(count)
+    {
+        if (cluster.isMaster)
+        {
+            // Write the PID file:
+            var pid = process.pid.toString();
+
+            fs.writeFile("./logs/bagarino.pid", pid, function(err)
             {
-                console.log("Could not write PID file. Cause: %s", err);
+                if (err)
+                {
+                    console.log("Could not write PID file. Cause: %s", err);
+                }
+            });
+
+
+            while (count-- > 0)
+            {
+                console.log("Creating worker #%d...", count);
+
+                cluster.fork().on("exit", workerExitRoutine);
             }
-        });
-        
-        
-        while (count-- > 0)
-        {
-            console.log("Creating worker #%d...", count);
-            
-            cluster.fork().on("exit", workerExitRoutine);
         }
-    }
-    else
-    {
-        // Run the bagarino server if running as worker
-        require("../app");
-    }
-}
-
-/**
- * Kills all workers with the given signal.
- * @param  {Number} signal
- */
-function killAllWorkers(signal)
-{
-    var uniqueID;
-    var worker;
-    
-    for (uniqueID in cluster.workers)
-    {
-        if (cluster.workers.hasOwnProperty(uniqueID))
+        else
         {
-            worker = cluster.workers[uniqueID];
-            
-            worker.kill(signal);
+            // Run the bagarino server if running as worker
+            require("../app");
         }
-    }
-}
+    };
 
-/**
- * Restarts the workers.
- */
-process.on("SIGHUP", function()
-{
-    killAllWorkers("SIGTERM");
+    /**
+     * Kills all workers with the given signal.
+     * @param  {Number} signal
+     */
+    var killAllWorkers = function(signal)
+    {
+        var uniqueID;
+        var worker;
+
+        for (uniqueID in cluster.workers)
+        {
+            if (cluster.workers.hasOwnProperty(uniqueID))
+            {
+                worker = cluster.workers[uniqueID];
+
+                worker.kill(signal);
+            }
+        }
+    };
+
+    /**
+     * Restarts the workers.
+     */
+    process.on("SIGHUP", function()
+    {
+        killAllWorkers("SIGTERM");
+        createWorkers(1);
+    });
+
+    /**
+     * Gracefully Shuts down the workers.
+     */
+    process.on("SIGTERM", function()
+    {
+        killAllWorkers("SIGTERM");
+    });
+
+
+    // Create a child for each CPU
     createWorkers(1);
-});
-
-/**
- * Gracefully Shuts down the workers.
- */
-process.on("SIGTERM", function()
-{
-    killAllWorkers("SIGTERM");
-});
-
-
-// Create a child for each CPU
-createWorkers(1);
+}
