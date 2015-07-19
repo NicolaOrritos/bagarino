@@ -4,15 +4,29 @@ bagarino
 Ask it for a new ticket and it'll give you. Then ask it whether a ticket is still valid or expired. Or whether it is a fake. It'll know for sure.
 When tickets expire simply ask bagarino for new ones.
 
-bagarino can be used as a support for a licensing server and as an helper to other systems in an authentication scenario.
+bagarino can be used as a support for a licensing server and as an helper to other systems in an authentication/authorization scenario.
 
 
-Install
--------
+## Table of Contents
+- [Install](#install)
+- [Usage](#usage)
+- [Configuration](#configuration)
+- [Tickets](#tickets)
+  - [New Tickets](#new-tickets)
+  - [Valid Tickets](#valid-tickets)
+  - [Expired Tickets](#expired-tickets)  
+  - [Forcible Manual Expiration](#forcible-manual-expiration)
+  - [Mass-creation of tickets](#mass-creation-of-tickets)
+  - [Tickets Contexts](#tickets-contexts)
+  - [Auto-renewing Tickets](#auto-renewing-tickets)
+  - [Tickets Generation Speed](#tickets-generation-speed)
+- [Garbage Collection](#garbage-collection)
+
+
+## Install
 	npm install -g bagarino
 
-Usage
------
+## Usage
 _bagarino_ needs Redis (http://redis.io/) to be installed and running in order to work.
 To start bagarino run the following command:
 
@@ -20,8 +34,7 @@ To start bagarino run the following command:
 
 _bagarino_ is now up and running, listening for requests on port 8124.
 
-Configuration
--------------
+## Configuration
 Right out of the box _bagarino_ is configured to run with default settings that make it listen on port 8124, protocol _http_, and log to _/var/log_.  
 These settings can be easily overridden by placing a file named _"bagarino.conf"_ under _/etc_.
 This file must contain a valid JSON, organized as follows:
@@ -137,7 +150,7 @@ The parameter *"expires_in"* has to be read based on the policy of the ticket:
 Expired tickets are kept in memory by bagarino for 10 days. After that time a call to their status will return "NOT_VALID" as it would for a ticket that didn't exist in the first place.
 
 
-### Forceable manual expiration
+### Forcible Manual Expiration
 Even tickets with a policy other than *"manual_expiration"* can be forcibly ended by calling the *expire* verb, provided that they had been created with an ad-hoc option, *"can\_force\_expiration"*:
 
 	http://localhost:8124/tickets/new?policy=requests_based&can_force_expiration=true
@@ -162,7 +175,7 @@ Here's a typical request for mass-creation of tickets:
     200 OK {"result":"OK","tickets":["9c7800ec9cf053e60674042533710c556fe22949","3cd5da62c2ba6d2b6b8973016264282f61f4afdd","7207c7effb2bd8fd97b885a4f72492a97e79babf","75a6cf2ba0454dfe74a4d6ce8baa80881fb76005"],"expire_in":60,"policy":"time_based"}
 
 
-### Tickets contexts
+### Tickets Contexts
 Sometimes it may be useful to bound one or more tickets to a "context" so they only acquire a meaning under certain conditions.
 In bagarino this is done by attaching a textual context to the ticket during the "new" operation:
 
@@ -180,7 +193,7 @@ The way to ask for a context-bound token is as follows:
     200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
 
-### Auto-renewing tickets
+### Auto-renewing Tickets
 A ticket created with the option _autorenew=true_ automatically generates a new one right before expiring.
 Only requests-based ones can be decorated at creation with the additional option _"autorenew"_.
 When this option is _true_ bagarino automatically spawns a new ticket when the old one's expiration is one request away,
@@ -200,7 +213,26 @@ After asking 9 times for this ticket validity here's what happens asking one mor
 A new ticket, _c7433c48f56bd224de43b232657165842609690b_, is born, right when the old one expires and with the same policy and initial TTL (i.e. 10 requests).
 
 
-### Garbage Collection
+### Tickets Generation Speed
+Generating a ticket takes some CPU time and, under certain circumstances, this may be an issue. To arbitrarily reduce generation time a feature is present in _bagarino_ that can be activated by passing certain values to the optional _**"generation_speed"**_ parameter.
+
+	http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=slow
+	200 OK
+	{"result":"OK","expires_in":30,"ticket":"e7e0dc24544cf038daf1e5f32ff0451a65a04661","policy":"time_based"}
+
+	http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=fast
+	200 OK
+	{"result":"OK","expires_in":30,"ticket":"BgvPnLoxr","policy":"time_based"}
+
+	http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=faster
+	200 OK
+	{"result":"OK","expires_in":30,"ticket":"1437313717902","policy":"time_based"
+
+Notice how the format of the tickets is different for every approach: that's a direct consequence of the speed the tickets are generated.  
+**When no generation speed is specified the default _slow_ one is used.**
+
+
+## Garbage Collection
 Under some circumstances it may happen that one or more tickets become _stale_ and continue to be tracked by bagarino even if they aren't active anymore.  
 A command-line switch can be used to remove them all at once, but pay attention to some potential issues:
 - stale tickets can't be recovered after they got deleted by a garbage collection
