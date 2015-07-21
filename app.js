@@ -5,39 +5,13 @@
 var fs      = require('fs');
 var cluster = require('cluster');
 var restify = require('restify');
-var sjl     = require('sjl');
 var Log     = require('log');
-
-
-var defaults =
-{
-    'ENVIRONMENT': 'production',
-
-    'PORT': 8124,
-    'HTTPS_PORT': 8443,
-
-    'SERVER_TYPE': {
-        'HTTPS': {
-            'ENABLED': false,
-            'KEY':  'private/key.pem',
-            'CERT': 'private/cert.crt'
-        },
-        'HTTP': {
-            'ENABLED': true
-        }
-    },
-
-    'LOGGING': {
-        'ENABLED': true,
-        'PATH': '/var/log'
-    }
-};
-
-var CONF = sjl('/etc/bagarino.conf', defaults);
+var CONF    = require('./lib/conf');
+var CONST   = require('./lib/const');
 
 
 // Initialize logging
-if ('development' === CONF.ENVIRONMENT)
+if (CONST.ENV.DEVELOPMENT === CONF.ENVIRONMENT)
 {
     // Let's log to stdout
     global.log = new Log('debug');
@@ -60,12 +34,12 @@ function initAndStart(server, port)
     if (server && port)
     {
         server.use(restify.queryParser());
-        
+
         server.get('/tickets/new',                 routes.tickets.new);
         server.get('/tickets/:ticket/status',      routes.tickets.status);
         server.get('/tickets/:ticket/expire',      routes.tickets.expire);
         server.get('/contexts/:context/expireall', routes.contexts.expireall);
-        
+
         server.on ('NotFound',                     routes.utils.notpermitted);
         server.on ('MethodNotAllowed',             routes.utils.notpermitted);
         server.on ('uncaughtException',            routes.utils.notpermitted);
@@ -84,7 +58,7 @@ function initAndStart(server, port)
                             CONF.ENVIRONMENT,
                             cluster.worker.id);
         });
-        
+
         // Gracefully handle SIGTERM
         process.on('SIGTERM', function()
         {
@@ -116,4 +90,3 @@ if (CONF.SERVER_TYPE.HTTPS.ENABLED)
 
     initAndStart(httpsServer, CONF.HTTPS_PORT);
 }
-
