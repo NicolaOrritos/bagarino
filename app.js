@@ -74,19 +74,28 @@ function initAndStart(server, port)
 
 if (CONF.SERVER_TYPE.HTTP.ENABLED)
 {
-    var server = restify.createServer();
+    var httpServer = restify.createServer();
 
-    initAndStart(server, CONF.PORT);
+    initAndStart(httpServer, CONF.PORT);
 }
 
 if (CONF.SERVER_TYPE.HTTPS.ENABLED)
 {
-    var privateKey  = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.KEY,  'utf8');
-    var certificate = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.CERT, 'utf8');
+    if (CONF.SERVER_TYPE.HTTP.ENABLED && CONF.PORT === CONF.HTTPS_PORT)
+    {
+        global.log.error('Could not start bagarino HTTP and HTTPS server on the same port (%s)! Exiting...', CONF.PORT);
 
-    var credentials = {key: privateKey, certificate: certificate};
+        process.exit();
+    }
+    else
+    {
+        var privateKey  = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.KEY,  'utf8');
+        var certificate = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.CERT, 'utf8');
 
-    var httpsServer = restify.createServer(credentials);
+        var credentials = {key: privateKey, certificate: certificate};
 
-    initAndStart(httpsServer, CONF.HTTPS_PORT);
+        var httpsServer = restify.createServer(credentials);
+
+        initAndStart(httpsServer, CONF.HTTPS_PORT);
+    }
 }
