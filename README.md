@@ -27,8 +27,8 @@ bagarino can be used as a support for a licensing server and as an helper to oth
 	npm install -g bagarino
 
 ## Usage
-_bagarino_ needs Redis (http://redis.io/) to be installed and running in order to work.
-To start bagarino run the following command:
+_bagarino_ needs Redis ([redis.io](http://redis.io/)) to be installed and running in order to work.
+To run bagarino use the following command:
 
 	sudo bagarino
 
