@@ -41,7 +41,10 @@ function initAndStart(server, port)
         server.get('/tickets/:ticket/expire',      routes.tickets.expire);
         server.get('/contexts/:context/expireall', routes.contexts.expireall);
 
-        server.get("/metrics",                     prometheus.metrics);
+        if (CONF.ENABLE_PROMETHEUS)
+        {
+            server.get("/metrics",                 prometheus.metrics);
+        }
 
         server.on ('NotFound',                     routes.utils.notpermitted);
         server.on ('MethodNotAllowed',             routes.utils.notpermitted);
