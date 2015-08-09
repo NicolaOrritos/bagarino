@@ -2,12 +2,13 @@
 // [todo] - Tune logging subsystem and use it thoroughly
 
 
-var fs      = require('fs');
-var cluster = require('cluster');
-var restify = require('restify');
-var Log     = require('log');
-var CONF    = require('./lib/conf');
-var CONST   = require('./lib/const');
+var fs         = require('fs');
+var cluster    = require('cluster');
+var restify    = require('restify');
+var Log        = require('log');
+var CONF       = require('./lib/conf');
+var CONST      = require('./lib/const');
+var prometheus = require('./lib/prometheus');
 
 
 // Initialize logging
@@ -35,10 +36,12 @@ function initAndStart(server, port)
     {
         server.use(restify.queryParser());
 
-        server.get('/tickets/new',                 routes.tickets.new);
-        server.get('/tickets/:ticket/status',      routes.tickets.status);
+        server.get('/tickets/new',                 routes.tickets.new,    prometheus.counters.new);
+        server.get('/tickets/:ticket/status',      routes.tickets.status, prometheus.counters.status);
         server.get('/tickets/:ticket/expire',      routes.tickets.expire);
         server.get('/contexts/:context/expireall', routes.contexts.expireall);
+
+        server.get("/metrics",                     prometheus.metrics);
 
         server.on ('NotFound',                     routes.utils.notpermitted);
         server.on ('MethodNotAllowed',             routes.utils.notpermitted);
