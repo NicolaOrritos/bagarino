@@ -32,7 +32,7 @@ exports.read =
 
     'Bandwidth-based tickets': function(test)
     {
-        test.expect(31);
+        test.expect(35);
 
         var requests = 4;
 
@@ -85,7 +85,7 @@ exports.read =
 
                         // Then wait a bit more of a minute to reset the counter and try the lightweight parameter
                         var wait = 61 * 1000;
-                        console.log('\n\n Waiting %s seconds for the bandwith check to reset... \n\n', wait);
+                        console.log('\n\n Waiting %s seconds for the bandwith check to reset... \n\n', wait / 1000);
 
                         setTimeout(function()
                         {
@@ -127,10 +127,22 @@ exports.read =
 
                                             result = JSON.parse(res8.body);
 
-                                            test.equal(result.status, CONST.EXPIRED_TICKET);
+                                            test.equal(result.status, CONST.VALID_TICKET);
+                                            test.equal(result.expires_in, requests - 4);
 
 
-                                            test.done();
+                                            request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err9, res9)
+                                            {
+                                                test.ifError(err9);
+                                                test.equal(res9.statusCode, 200);
+
+                                                result = JSON.parse(res9.body);
+
+                                                test.equal(result.status, CONST.EXPIRED_TICKET);
+
+
+                                                test.done();
+                                            });
                                         });
                                     });
                                 });
