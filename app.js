@@ -37,6 +37,7 @@ function initAndStart(server, port)
 
         server.get('/tickets/new',                 routes.tickets.new);
         server.get('/tickets/:ticket/status',      routes.tickets.status);
+        server.get('/tickets/:ticket/policy',      routes.tickets.policy);
         server.get('/tickets/:ticket/expire',      routes.tickets.expire);
         server.get('/contexts/:context/expireall', routes.contexts.expireall);
 
