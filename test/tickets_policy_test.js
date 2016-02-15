@@ -32,8 +32,6 @@ exports.read =
 
     'Tickets policy retrieval': function(test)
     {
-        test.expect(8);
-
         request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=2', function(err, res)
         {
             test.ifError(err);
@@ -49,7 +47,7 @@ exports.read =
             test.ok(ticket);
 
 
-            request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err2, res2)
+            request.get('http://localhost:8124/tickets/' + ticket + '/policy', function(err2, res2)
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 200);
@@ -57,6 +55,13 @@ exports.read =
                 result = JSON.parse(res2.body);
 
                 test.equal(result.policy, 'time_based');
+
+                test.ok(result.more);
+                test.equal(result.more.context, undefined);
+                test.equal(result.more.autorenew, false);
+                test.equal(result.more.depends_on, undefined);
+                test.equal(result.more.generation_speed, CONST.SPEED.SLOW);
+                test.equal(result.more.can_force_expiration, false);
 
 
                 test.done();

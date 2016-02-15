@@ -20,6 +20,8 @@ bagarino can be used as a support for a licensing server and as an helper to oth
   - [Tickets Contexts](#tickets-contexts)
   - [Auto-renewing Tickets](#auto-renewing-tickets)
   - [Tickets Generation Speed](#tickets-generation-speed)
+  - [Lightweight Validation](#lightweight-validation)
+  - [Retrieve Tickets Policy](#retrieve-tickets-policy)
 - [Garbage Collection](#garbage-collection)
 
 
@@ -229,7 +231,43 @@ Generating a ticket takes some CPU time and, under certain circumstances, this m
 	{"result":"OK","expires_in":30,"ticket":"1437313717902","policy":"time_based"
 
 Notice how the format of the tickets is different for every approach: that's a direct consequence of the speed the tickets are generated.  
-**When no generation speed is specified the default _slow_ one is used.**
+**When no generation speed is specified the default _slow_ one is used.**  
+It's almost superfluous to note that faster generation speeds are more subject to _weak_ tickets
+that can conflict across an eventual _multi-bagarinos_ environment.  
+Viceversa, slower generation speeds are more CPU-demanding although giving birth to _strong_ tickets that are almost unique.
+
+
+### Lightweight Validation
+Sometimes checking a ticket validity directly influences its status: in particular requests- or bandwidth-based tickets
+have policies that put a direct correlation between the number of times a "status" check is called for them and their validity itself.
+
+There may be times when it's needed to check whether a ticket with one of these policies is valid or not,
+without affecting its status.  
+At those times a "status" call can be expanded with a "light" parameter, like this:
+
+	http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/status?light=true
+	200 OK {"status":"VALID","expires_in":100,"policy":"requests_based"}
+
+The net result, in this case for a requests-based ticket, is the call not affecting the remaining number of times the "status" call can be made for this ticket.
+I.e. Calling status on it again will show the same number of remaining "status" checks:
+
+	http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/status?light=true
+	200 OK {"status":"VALID","expires_in":100,"policy":"requests_based"}
+
+Almost the same applies to bandwidth-based tickets, except that, for them, the number of "status" checks resets every minute.
+
+
+### Retrieve Tickets Policy
+In bagarino version 1.10.2 a new utility call has been added, that can be used to retrieve which policy a ticket responds to:
+
+	http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/policy
+	200 OK {"policy":"**requests_based**","more":{"autorenew":false,"generation_speed":"slow","can_force_expiration":false}}
+
+This way the policy for that ticket can be retrieved without the need to issue a "status" call on it.  
+You can notice that the response to a "policy" call carries some additional info about other parameters driving the ticket behavior.  
+In fact, the "more" object contains a list of settings for this ticket other than the policy type.
+For explanations about any of them see the paragraphs above in this same guide.
+
 
 
 ## Garbage Collection
