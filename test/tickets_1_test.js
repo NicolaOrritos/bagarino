@@ -1,7 +1,7 @@
 'use strict';
 
-var request = require('request');
-var CONST   = require('../lib/const');
+const request = require('request');
+const CONST   = require('../lib/const');
 
 /*
   ======== A Handy Little Nodeunit Reference ========
@@ -29,22 +29,22 @@ exports.read =
     {
         done();
     },
-    
+
     'Tickets route - Part 1': function(test)
     {
         test.expect(15);
 
-        request.get('http://localhost:8124/tickets/new?policy=manual_expiration', function(err, res)
+        request.get('http://localhost:8124/tickets/new?policy=manual_expiration', (err, res) =>
         {
             test.ifError(err);
             test.equal(res.statusCode, 200);
 
-            var result = JSON.parse(res.body);
+            let result = JSON.parse(res.body);
 
             test.equal(result.result, CONST.OK);
 
 
-            request.get('http://localhost:8124/tickets/' + result.ticket + '/expire', function(err2, res2)
+            request.get('http://localhost:8124/tickets/' + result.ticket + '/expire', (err2, res2) =>
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 200);
@@ -54,7 +54,7 @@ exports.read =
                 test.equal(result.status, CONST.EXPIRED_TICKET);
 
 
-                request.get('http://localhost:8124/tickets/new?policy=requests_based&requests=1', function(err3, res3)
+                request.get('http://localhost:8124/tickets/new?policy=requests_based&requests=1', (err3, res3) =>
                 {
                     test.ifError(err3);
                     test.equal(res3.statusCode, 200);
@@ -66,7 +66,7 @@ exports.read =
                     test.ok(result.ticket);
 
 
-                    request.get('http://localhost:8124/tickets/' + result.ticket + '/status', function(err4, res4)
+                    request.get('http://localhost:8124/tickets/' + result.ticket + '/status', (err4, res4) =>
                     {
                         test.ifError(err4);
                         test.equal(res4.statusCode, 200);

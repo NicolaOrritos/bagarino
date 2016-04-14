@@ -1,7 +1,7 @@
 'use strict';
 
-var request = require('request');
-var CONST   = require('../lib/const');
+const request = require('request');
+const CONST   = require('../lib/const');
 
 /*
   ======== A Handy Little Nodeunit Reference ========
@@ -32,22 +32,22 @@ exports.read =
 
     'Tickets policy retrieval': function(test)
     {
-        request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=2', function(err, res)
+        request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=2', (err, res) =>
         {
             test.ifError(err);
             test.equal(res.statusCode, 200);
 
-            var result = JSON.parse(res.body);
+            let result = JSON.parse(res.body);
 
             test.equal(result.result, CONST.OK);
             test.equal(result.policy, 'time_based');
 
-            var ticket = result.ticket;
+            const ticket = result.ticket;
 
             test.ok(ticket);
 
 
-            request.get('http://localhost:8124/tickets/' + ticket + '/policy', function(err2, res2)
+            request.get('http://localhost:8124/tickets/' + ticket + '/policy', (err2, res2) =>
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 200);

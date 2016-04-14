@@ -1,13 +1,14 @@
 
 // [todo] - Tune logging subsystem and use it thoroughly
 
+'use strict';
 
-var fs      = require('fs');
-var cluster = require('cluster');
-var restify = require('restify');
-var Log     = require('log');
-var CONF    = require('./lib/conf');
-var CONST   = require('./lib/const');
+const fs      = require('fs');
+const cluster = require('cluster');
+const restify = require('restify');
+const Log     = require('log');
+const CONF    = require('./lib/conf');
+const CONST   = require('./lib/const');
 
 
 // Initialize logging
@@ -22,7 +23,7 @@ else
 }
 
 
-var routes =
+const routes =
 {
     'tickets' : require('./lib/tickets'),
     'contexts': require('./lib/contexts'),
@@ -31,6 +32,13 @@ var routes =
 
 function initAndStart(server, port)
 {
+    // Drop privileges if we are running as root
+    if (process.getgid() === 0)
+    {
+        process.setgid('nobody');
+        process.setuid('nobody');
+    }
+
     if (server && port)
     {
         server.use(restify.queryParser());
@@ -45,15 +53,8 @@ function initAndStart(server, port)
         server.on ('MethodNotAllowed',             routes.utils.notpermitted);
         server.on ('uncaughtException',            routes.utils.notpermitted);
 
-        server.listen(port, function()
+        server.listen(port, () =>
         {
-            // Drop privileges if we are running as root
-            if (process.getgid() === 0)
-            {
-                process.setgid('nobody');
-                process.setuid('nobody');
-            }
-
             global.log.info('BAGARINO server listening on port %d in %s mode [worker is %s]',
                             port,
                             CONF.ENVIRONMENT,
@@ -61,12 +62,12 @@ function initAndStart(server, port)
         });
 
         // Gracefully handle SIGTERM
-        process.on('SIGTERM', function()
+        process.on('SIGTERM', () =>
         {
             server.close(function()
             {
                 // Exit after server is closed
-                process.exit();
+                process.exit(0);
             });
         });
     }
@@ -75,7 +76,7 @@ function initAndStart(server, port)
 
 if (CONF.SERVER_TYPE.HTTP.ENABLED)
 {
-    var httpServer = restify.createServer();
+    const httpServer = restify.createServer();
 
     initAndStart(httpServer, CONF.PORT);
 }
@@ -86,16 +87,16 @@ if (CONF.SERVER_TYPE.HTTPS.ENABLED)
     {
         global.log.error('Could not start bagarino HTTP and HTTPS server on the same port (%s)! Exiting...', CONF.PORT);
 
-        process.exit();
+        process.exit(1);
     }
     else
     {
-        var privateKey  = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.KEY,  'utf8');
-        var certificate = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.CERT, 'utf8');
+        const privateKey  = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.KEY,  'utf8');
+        const certificate = fs.readFileSync(CONF.SERVER_TYPE.HTTPS.CERT, 'utf8');
 
-        var credentials = {key: privateKey, certificate: certificate};
+        const credentials = {key: privateKey, certificate: certificate};
 
-        var httpsServer = restify.createServer(credentials);
+        const httpsServer = restify.createServer(credentials);
 
         initAndStart(httpsServer, CONF.HTTPS_PORT);
     }

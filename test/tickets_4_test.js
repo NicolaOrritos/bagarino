@@ -1,7 +1,7 @@
 'use strict';
 
-var request = require('request');
-var CONST   = require('../lib/const');
+const request = require('request');
+const CONST   = require('../lib/const');
 
 /*
   ======== A Handy Little Nodeunit Reference ========
@@ -29,32 +29,32 @@ exports.read =
     {
         done();
     },
-    
+
     'Tickets generation speeds': function(test)
     {
         test.expect(12);
-        
-        var seconds = 2;
-        
-        var genspeed = CONST.SPEED.FASTER;
-        
-        request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=' + seconds + '&generation_speed=' + genspeed, function(err, res)
+
+        let seconds = 2;
+
+        let genspeed = CONST.SPEED.FASTER;
+
+        request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=' + seconds + '&generation_speed=' + genspeed, (err, res) =>
         {
             test.ifError(err);
             test.equal(res.statusCode, 200);
-            
-            var result = JSON.parse(res.body);
-            
+
+            let result = JSON.parse(res.body);
+
             test.equal(result.result, CONST.OK);
-            
-            var ticket = result.ticket;
-            
+
+            let ticket = result.ticket;
+
             test.ok(ticket);
-            
-            
+
+
             genspeed = CONST.SPEED.FAST;
-            
-            request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=' + seconds + '&generation_speed=' + genspeed, function(err2, res2)
+
+            request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=' + seconds + '&generation_speed=' + genspeed, (err2, res2) =>
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 200);
@@ -62,15 +62,15 @@ exports.read =
                 result = JSON.parse(res2.body);
 
                 test.equal(result.result, CONST.OK);
-                
+
                 ticket = result.ticket;
-            
+
                 test.ok(ticket);
-                
-                
+
+
                 genspeed = CONST.SPEED.SLOW;
-                
-                request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=' + seconds + '&generation_speed=' + genspeed, function(err3, res3)
+
+                request.get('http://localhost:8124/tickets/new?policy=time_based&seconds=' + seconds + '&generation_speed=' + genspeed, (err3, res3) =>
                 {
                     test.ifError(err3);
                     test.equal(res3.statusCode, 200);

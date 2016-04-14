@@ -1,47 +1,46 @@
 #!/usr/bin/env node
 
+'use strict';
+
 /**
  * bin/start-bagarino-daemon
  */
 
 
 // Parsing some options:
-var docopt   = require('docopt').docopt;
+const docopt = require('docopt').docopt;
 
 
-var options = 'Start the bagarino daemon or perform a Garbage Collection of stale tickets \n'
-            + ' \n'
-            + 'Usage: \n'
-            + '  bagarino [gc | gcv] \n'
-            + '  bagarino -h | --help \n'
-            + ' \n'
-            + 'Options: \n'
-            + '  gc          Perform a Garbage Collection of stale tickets \n'
-            + '  gcv         Perform Garbage Collection and be verbose about it \n'
-            + '  --h --help  Show this help \n';
+const options = 'Start the bagarino daemon or perform a Garbage Collection of stale tickets \n'
+              + ' \n'
+              + 'Usage: \n'
+              + '  bagarino [gc | gcv] \n'
+              + '  bagarino -h | --help \n'
+              + ' \n'
+              + 'Options: \n'
+              + '  gc          Perform a Garbage Collection of stale tickets \n'
+              + '  gcv         Perform Garbage Collection and be verbose about it \n'
+              + '  --h --help  Show this help \n';
 
-var cmd = docopt(options);
+const cmd = docopt(options);
 
 if (cmd && (cmd['gc'] || cmd['gcv']))
 {
-    var gc = require('../lib/gc.js');
+    const gc = require('../lib/gc.js');
 
-    var verbose = cmd['gcv'] ? true : false;
+    const verbose = cmd['gcv'] ? true : false;
 
     gc.run(verbose)
-    .then(function(count)
+    .then( count =>
     {
         console.log('Garbage Collection performed correctly.');
         console.log('%s stale ticket(s) cleaned.', count);
     })
-    .catch(function(err)
+    .catch( err =>
     {
         console.log('Could not perform Garbage Collection. %s', err.stack);
     })
-    .finally(function()
-    {
-        process.exit();
-    });
+    .finally(process.exit);
 }
 else
 {
@@ -49,25 +48,25 @@ else
     require("daemon")();
 
 
-    var cluster = require("cluster");
-    var fs = require('fs');
+    const cluster = require("cluster");
+    const fs = require('fs');
 
     console.log("Starting bagarino daemon...");
 
 
     // Load and apply some bare-bones config:
-    var sjl = require("sjl");
+    const sjl = require("sjl");
 
-    var defaults = {"ENVIRONMENT": "development"};
-    var CONF = sjl("/etc/bagarino.conf", defaults);
+    const defaults = {"ENVIRONMENT": "development"};
+    const CONF = sjl("/etc/bagarino.conf", defaults);
 
     process.env["NODE_ENV"] = CONF.ENVIRONMENT;
 
 
     // Number of CPUs
-    var cpus = require("os").cpus().length;
+    const cpus = require("os").cpus().length;
 
-    var workerExitRoutine = function(code, signal)
+    const workerExitRoutine = function(code, signal)
     {
         if (code !== 0 || (signal && signal !== 'SIGTERM'))
         {
@@ -76,7 +75,7 @@ else
 
 
             // Replace the dead worker, we're not sentimental
-            var worker = cluster.fork();
+            const worker = cluster.fork();
 
             worker.on("exit", workerExitRoutine);
         }
@@ -92,14 +91,14 @@ else
      *
      * @param  {Number} count Number of workers to create.
      */
-    var createWorkers = function(count)
+    const createWorkers = function(count)
     {
         if (cluster.isMaster)
         {
             // Write the PID file:
-            var pid = process.pid.toString();
+            const pid = process.pid.toString();
 
-            fs.writeFile("/var/run/bagarino.pid", pid, function(err)
+            fs.writeFile("/var/run/bagarino.pid", pid, err =>
             {
                 if (err)
                 {
@@ -110,7 +109,7 @@ else
 
             while (count-- > 0)
             {
-                console.log("Creating worker #%d...", count);
+                console.log("Creating worker #%d...", (count + 1));
 
                 cluster.fork().on("exit", workerExitRoutine);
             }
@@ -126,17 +125,12 @@ else
      * Kills all workers with the given signal.
      * @param  {Number} signal
      */
-    var killAllWorkers = function(signal)
+    const killAllWorkers = function(signal)
     {
-        var uniqueID;
-        var worker;
-
-        for (uniqueID in cluster.workers)
+        for (let worker of cluster.workers)
         {
-            if (cluster.workers.hasOwnProperty(uniqueID))
+            if (worker)
             {
-                worker = cluster.workers[uniqueID];
-
                 worker.kill(signal);
             }
         }
@@ -145,7 +139,7 @@ else
     /**
      * Restarts the workers.
      */
-    process.on("SIGHUP", function()
+    process.on("SIGHUP", () =>
     {
         killAllWorkers("SIGTERM");
         createWorkers(cpus);
@@ -154,7 +148,7 @@ else
     /**
      * Gracefully Shuts down the workers.
      */
-    process.on("SIGTERM", function()
+    process.on("SIGTERM", () =>
     {
         killAllWorkers("SIGTERM");
     });

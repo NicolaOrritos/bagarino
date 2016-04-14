@@ -1,12 +1,12 @@
 'use strict';
 
 
-var request = require('request');
-var sleep   = require('sleep').sleep;
-var fs      = require('fs');
+const request = require('request');
+const sleep   = require('sleep').sleep;
+const fs      = require('fs');
 
 
-module.exports = function (grunt)
+module.exports = function(grunt)
 {
     // show elapsed time at the end
     require('time-grunt')(grunt);
@@ -16,7 +16,8 @@ module.exports = function (grunt)
 
     grunt.loadNpmTasks('grunt-plato');
 
-    var reloadPort = 35729, files;
+    const reloadPort = 35729;
+    let files;
 
     grunt.initConfig(
     {
@@ -89,63 +90,77 @@ module.exports = function (grunt)
     files = grunt.config('watch.server.files');
     files = grunt.file.expand(files);
 
-    grunt.registerTask('delayed-livereload', 'Live reload after the node server has restarted.', function () {
-        var done = this.async();
-        setTimeout(function () {
-            request.get('http://localhost:' + reloadPort + '/changed?files=' + files.join(','),  function (err, res) {
-                var reloaded = !err && res.statusCode === 200;
-                if (reloaded) {
+    // Not using arrow-syntax functions because this.async will loose meaning:
+    grunt.registerTask('delayed-livereload', 'Live reload after the node server has restarted.', function()
+    {
+        const done = this.async();
+
+        setTimeout( () =>
+        {
+            request.get('http://localhost:' + reloadPort + '/changed?files=' + files.join(','), (err, res) =>
+            {
+                const reloaded = !err && res.statusCode === 200;
+
+                if (reloaded)
+                {
                     grunt.log.ok('Delayed live reload successful.');
-                } else {
+                }
+                else
+                {
                     grunt.log.error('Unable to make a delayed live reload.');
                 }
+
                 done(reloaded);
             });
+
         }, 500);
     });
 
+    // Not using arrow-syntax functions because this.async will loose meaning:
     grunt.registerTask('warmup', 'Check system preconditions before starting the systems', function()
     {
-        var done   = this.async();
+        const done = this.async();
 
         // Check whether Redis exists
-        var redis  = require("redis");
-        var client = redis.createClient();
-        client.on("error", function(err)
+        const redis  = require("redis");
+        const client = redis.createClient();
+
+        client.on("error", err =>
         {
             grunt.log.writeln('Redis error: ' + err);
             done(false);
         });
-        client.on("ready", function()
+
+        client.on("ready", () =>
         {
             grunt.log.writeln("Everything's fine");
             done(true);
         });
     });
 
-    grunt.registerTask('startserver', 'Start the service', function()
+    grunt.registerTask('startserver', 'Start the service', () =>
     {
         grunt.task.requires('warmup');
 
         grunt.log.writeln('Running bagarino server from "%s"...', process.cwd());
 
-        var fork = require('child_process').fork;
+        const fork = require('child_process').fork;
 
         fork('bin/start-bagarino-daemon_dev', [], {detached: true, cwd: process.cwd(), env: process.env});
     });
 
-    grunt.registerTask('stopserver', 'Stop the service', function()
+    grunt.registerTask('stopserver', 'Stop the service', () =>
     {
-        var pid = fs.readFileSync('./logs/bagarino.pid', {encoding: 'UTF-8'});
+        const pid = fs.readFileSync('./logs/bagarino.pid', {encoding: 'UTF-8'});
 
         grunt.log.writeln('Stopping bagarino server with PID "%s"...', pid);
 
         process.kill(pid, 'SIGTERM');
     });
 
-    grunt.registerTask('wait', 'Wait N seconds', function()
+    grunt.registerTask('wait', 'Wait N seconds', () =>
     {
-        var secs = 1;
+        const secs = 1;
 
         grunt.log.writeln('Waiting %d second(s) before continuing...', secs);
 

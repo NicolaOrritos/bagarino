@@ -1,7 +1,7 @@
 'use strict';
 
-var request = require('request');
-var CONST   = require('../lib/const');
+const request = require('request');
+const CONST   = require('../lib/const');
 
 /*
   ======== A Handy Little Nodeunit Reference ========
@@ -34,23 +34,23 @@ exports.read =
     {
         test.expect(16);
 
-        var requests = 4;
+        let requests = 4;
 
-        request.get('http://localhost:8124/tickets/new?policy=requests_based&requests=' + requests, function(err, res)
+        request.get('http://localhost:8124/tickets/new?policy=requests_based&requests=' + requests, (err, res) =>
         {
             test.ifError(err);
             test.equal(res.statusCode, 200);
 
-            var result = JSON.parse(res.body);
+            let result = JSON.parse(res.body);
 
             test.equal(result.result, CONST.OK);
 
-            var ticket = result.ticket;
+            let ticket = result.ticket;
 
             test.ok(ticket);
 
 
-            request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err2, res2)
+            request.get('http://localhost:8124/tickets/' + ticket + '/status', (err2, res2) =>
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 200);
@@ -61,7 +61,7 @@ exports.read =
                 test.equal(result.expires_in, requests - 1);
 
 
-                request.get('http://localhost:8124/tickets/' + ticket + '/status?light=true', function(err3, res3)
+                request.get('http://localhost:8124/tickets/' + ticket + '/status?light=true', (err3, res3) =>
                 {
                     test.ifError(err3);
                     test.equal(res3.statusCode, 200);
@@ -73,7 +73,7 @@ exports.read =
 
 
                     // Notice the "light" parameter with an unsupported value: the parameter MUST be ignored
-                    request.get('http://localhost:8124/tickets/' + ticket + '/status?light=somethingstupid', function(err4, res4)
+                    request.get('http://localhost:8124/tickets/' + ticket + '/status?light=somethingstupid', (err4, res4) =>
                     {
                         test.ifError(err4);
                         test.equal(res4.statusCode, 200);
@@ -95,23 +95,23 @@ exports.read =
     {
         test.expect(25);
 
-        var requests = 2;
+        let requests = 2;
 
-        request.get('http://localhost:8124/tickets/new?policy=bandwidth_based&reqs_per_minute=' + requests, function(err, res)
+        request.get('http://localhost:8124/tickets/new?policy=bandwidth_based&reqs_per_minute=' + requests, (err, res) =>
         {
             test.ifError(err);
             test.equal(res.statusCode, 200);
 
-            var result = JSON.parse(res.body);
+            let result = JSON.parse(res.body);
 
             test.equal(result.result, CONST.OK);
 
-            var ticket = result.ticket;
+            let ticket = result.ticket;
 
             test.ok(ticket);
 
 
-            request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err2, res2)
+            request.get('http://localhost:8124/tickets/' + ticket + '/status', (err2, res2) =>
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 200);
@@ -122,9 +122,9 @@ exports.read =
 
 
                 // Consume the requests and get an "expired" status
-                request.get('http://localhost:8124/tickets/' + ticket + '/status', function()
+                request.get('http://localhost:8124/tickets/' + ticket + '/status', () =>
                 {
-                    request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err3, res3)
+                    request.get('http://localhost:8124/tickets/' + ticket + '/status', (err3, res3) =>
                     {
                         test.ifError(err3);
                         test.equal(res3.statusCode, 200);
@@ -135,12 +135,12 @@ exports.read =
 
 
                         // Then wait a bit more of a minute to reset the counter and try the lightweight parameter
-                        var wait = 61 * 1000;
+                        const wait = 61 * 1000;
                         console.log('\n\n Waiting %s seconds for the bandwith check to reset... \n\n', wait / 1000);
 
-                        setTimeout(function()
+                        setTimeout( () =>
                         {
-                            request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err4, res4)
+                            request.get('http://localhost:8124/tickets/' + ticket + '/status', (err4, res4) =>
                             {
                                 test.ifError(err4);
                                 test.equal(res4.statusCode, 200);
@@ -152,7 +152,7 @@ exports.read =
 
 
                                 // Notice the applied "light" parameter:
-                                request.get('http://localhost:8124/tickets/' + ticket + '/status?light=true', function(err5, res5)
+                                request.get('http://localhost:8124/tickets/' + ticket + '/status?light=true', (err5, res5) =>
                                 {
                                     test.ifError(err5);
                                     test.equal(res5.statusCode, 200);
@@ -163,7 +163,7 @@ exports.read =
                                     test.equal(result.expires_in, requests - 1);
 
 
-                                    request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err6, res6)
+                                    request.get('http://localhost:8124/tickets/' + ticket + '/status', (err6, res6) =>
                                     {
                                         test.ifError(err6);
                                         test.equal(res6.statusCode, 200);
@@ -174,7 +174,7 @@ exports.read =
                                         test.equal(result.expires_in, requests - 2);
 
 
-                                        request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err7, res7)
+                                        request.get('http://localhost:8124/tickets/' + ticket + '/status', (err7, res7) =>
                                         {
                                             test.ifError(err7);
                                             test.equal(res7.statusCode, 200);

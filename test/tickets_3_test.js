@@ -1,7 +1,7 @@
 'use strict';
 
-var request = require('request');
-var CONST   = require('../lib/const');
+const request = require('request');
+const CONST   = require('../lib/const');
 
 /*
   ======== A Handy Little Nodeunit Reference ========
@@ -29,29 +29,29 @@ exports.read =
     {
         done();
     },
-    
+
     'Tickets route - Part 3': function(test)
     {
         test.expect(17);
 
-        var requests = 2;
+        let requests = 2;
 
-        request.get('http://localhost:8124/tickets/new?policy=requests_based&requests=' + requests, function(err, res)
+        request.get('http://localhost:8124/tickets/new?policy=requests_based&requests=' + requests, (err, res) =>
         {
             test.ifError(err);
             test.equal(res.statusCode, 200);
 
-            var result = JSON.parse(res.body);
+            let result = JSON.parse(res.body);
 
             test.equal(result.result, CONST.OK);
             test.equal(result.expires_in, requests);
 
-            var ticket = result.ticket;
+            const ticket = result.ticket;
 
             test.ok(ticket);
 
 
-            request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err2, res2)
+            request.get('http://localhost:8124/tickets/' + ticket + '/status', (err2, res2) =>
             {
                 requests--;
 
@@ -72,7 +72,7 @@ exports.read =
                 }
 
 
-                request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err3, res3)
+                request.get('http://localhost:8124/tickets/' + ticket + '/status', (err3, res3) =>
                 {
                     requests--;
 
@@ -93,7 +93,7 @@ exports.read =
                     }
 
 
-                    request.get('http://localhost:8124/tickets/' + ticket + '/status', function(err4, res4)
+                    request.get('http://localhost:8124/tickets/' + ticket + '/status', (err4, res4) =>
                     {
                         requests--;
 
