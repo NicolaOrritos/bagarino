@@ -14,12 +14,11 @@ const CONST   = require('./lib/const');
 // Initialize logging
 if (CONST.ENV.DEVELOPMENT === CONF.ENVIRONMENT)
 {
-    // Let's log to stdout
     global.log = new Log('debug');
 }
 else
 {
-    global.log = new Log('info', fs.createWriteStream(CONF.LOGGING.PATH + '/bagarino_w' + cluster.worker.id + '.log'));
+    global.log = new Log('info');
 }
 
 
@@ -32,13 +31,6 @@ const routes =
 
 function initAndStart(server, port)
 {
-    // Drop privileges if we are running as root
-    if (process.getgid() === 0)
-    {
-        process.setgid('nobody');
-        process.setuid('nobody');
-    }
-
     if (server && port)
     {
         server.use(restify.queryParser());

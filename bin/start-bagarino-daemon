@@ -2,14 +2,9 @@
 
 'use strict';
 
-/**
- * bin/start-bagarino-daemon
- */
-
 
 // Parsing some options:
 const docopt = require('docopt').docopt;
-
 
 const options = 'Start the bagarino daemon or perform a Garbage Collection of stale tickets \n'
               + ' \n'
@@ -23,6 +18,7 @@ const options = 'Start the bagarino daemon or perform a Garbage Collection of st
               + '  --h --help  Show this help \n';
 
 const cmd = docopt(options);
+
 
 if (cmd && (cmd['gc'] || cmd['gcv']))
 {
@@ -44,116 +40,13 @@ if (cmd && (cmd['gc'] || cmd['gcv']))
 }
 else
 {
-    // Everything above this line will be executed twice
-    require("daemon")();
+    const progenic = require('progenic');
+    const CONF     = require(__dirname + '/../lib/conf');
 
-
-    const cluster = require("cluster");
-    const fs = require('fs');
-
-    console.log("Starting bagarino daemon...");
-
-
-    // Load and apply some bare-bones config:
-    const sjl = require("sjl");
-
-    const defaults = {"ENVIRONMENT": "development"};
-    const CONF = sjl("/etc/bagarino.conf", defaults);
-
-    process.env["NODE_ENV"] = CONF.ENVIRONMENT;
-
-
-    // Number of CPUs
-    const cpus = require("os").cpus().length;
-
-    const workerExitRoutine = function(code, signal)
-    {
-        if (code !== 0 || (signal && signal !== 'SIGTERM'))
-        {
-            console.log("Worker '%s' died with code '%d' and signal '%s' :(", this.id, code, signal);
-            console.log("Restarting it...");
-
-
-            // Replace the dead worker, we're not sentimental
-            const worker = cluster.fork();
-
-            worker.on("exit", workerExitRoutine);
-        }
-        else
-        {
-            console.log("Worker '%s' gracefully shut down with code '%d' :)", this.id, code);
-        }
-    };
-
-    /**
-     * Creates the children workers when running as cluster master.
-     * Runs the HTTP server otherwise.
-     *
-     * @param  {Number} count Number of workers to create.
-     */
-    const createWorkers = function(count)
-    {
-        if (cluster.isMaster)
-        {
-            // Write the PID file:
-            const pid = process.pid.toString();
-
-            fs.writeFile("/var/run/bagarino.pid", pid, err =>
-            {
-                if (err)
-                {
-                    console.log("Could not write PID file. Cause: %s", err);
-                }
-            });
-
-
-            while (count-- > 0)
-            {
-                console.log("Creating worker #%d...", (count + 1));
-
-                cluster.fork().on("exit", workerExitRoutine);
-            }
-        }
-        else
-        {
-            // Run the bagarino server if running as worker
-            require("../app");
-        }
-    };
-
-    /**
-     * Kills all workers with the given signal.
-     * @param  {Number} signal
-     */
-    const killAllWorkers = function(signal)
-    {
-        for (let worker of cluster.workers)
-        {
-            if (worker)
-            {
-                worker.kill(signal);
-            }
-        }
-    };
-
-    /**
-     * Restarts the workers.
-     */
-    process.on("SIGHUP", () =>
-    {
-        killAllWorkers("SIGTERM");
-        createWorkers(cpus);
+    progenic.run({
+        name: 'bagarino',
+        main: '../app.js',
+        workers: 'auto',
+        devMode: (CONF.ENVIRONMENT === 'development')
     });
-
-    /**
-     * Gracefully Shuts down the workers.
-     */
-    process.on("SIGTERM", () =>
-    {
-        killAllWorkers("SIGTERM");
-    });
-
-
-    // Create a child for each CPU
-    createWorkers(cpus);
 }
