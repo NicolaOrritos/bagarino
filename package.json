@@ -1,6 +1,6 @@
 {
   "name": "bagarino",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "license": "Apache-2.0",
   "private": false,
   "repository": {
@@ -26,7 +26,7 @@
     "hiredis": "^0.4.1",
     "log": "^1.4.0",
     "node_hash": "^0.2.0",
-    "progenic": "^2.2.1",
+    "progenic": "^2.2.2",
     "redis": "^2.4.2",
     "restify": "^4.0.4",
     "sjl": "^0.4.0"
