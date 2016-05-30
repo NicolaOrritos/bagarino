@@ -3,7 +3,6 @@
 
 const request = require('request');
 const sleep   = require('sleep').sleep;
-const fs      = require('fs');
 
 
 module.exports = function(grunt)
@@ -65,12 +64,6 @@ module.exports = function(grunt)
             }
         },
 
-        develop: {
-            server: {
-                file: 'bin/start-bagarino-daemon_dev'
-            }
-        },
-
         watch: {
             options: {
                 nospawn: true,
@@ -78,7 +71,7 @@ module.exports = function(grunt)
             },
             server: {
                 files: [
-                    'bin/start-bagarino-daemon_dev',
+                    'bin/start-bagarino-daemon',
                     './app.js'
                 ],
                 tasks: ['develop', 'delayed-livereload']
@@ -146,16 +139,7 @@ module.exports = function(grunt)
 
         const fork = require('child_process').fork;
 
-        fork('bin/start-bagarino-daemon_dev', [], {detached: true, cwd: process.cwd(), env: process.env});
-    });
-
-    grunt.registerTask('stopserver', 'Stop the service', () =>
-    {
-        const pid = fs.readFileSync('./logs/bagarino.pid', {encoding: 'UTF-8'});
-
-        grunt.log.writeln('Stopping bagarino server with PID "%s"...', pid);
-
-        process.kill(pid, 'SIGTERM');
+        fork('bin/start-bagarino-daemon', ['--dev'], {detached: true, cwd: process.cwd(), env: process.env});
     });
 
     grunt.registerTask('wait', 'Wait N seconds', () =>
@@ -169,9 +153,7 @@ module.exports = function(grunt)
 
     grunt.registerTask('start', ['warmup', 'startserver']);
 
-    grunt.registerTask('stop', ['stopserver']);
-
-    grunt.registerTask('test', ['jshint', 'start', 'wait', 'nodeunit', 'wait', 'stop', 'plato']);
+    grunt.registerTask('test', ['jshint', 'start', 'wait', 'nodeunit', 'wait', 'plato']);
 
     grunt.registerTask('default', ['start', 'watch']);
 };
