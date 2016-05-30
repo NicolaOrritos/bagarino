@@ -9,7 +9,7 @@ const docopt = require('docopt').docopt;
 const options = 'Start the bagarino daemon or perform a Garbage Collection of stale tickets \n'
               + ' \n'
               + 'Usage: \n'
-              + '  bagarino [gc | gcv] \n'
+              + '  bagarino [gc | gcv] [--dev] \n'
               + '  bagarino -h | --help \n'
               + ' \n'
               + 'Options: \n'
@@ -43,10 +43,13 @@ else
     const progenic = require('progenic');
     const CONF     = require(__dirname + '/../lib/conf');
 
+    const devMode  = (cmd['--dev']) || (CONF.ENVIRONMENT === 'development') ? true : false;
+    const workers  = devMode ? 1 : 'auto';
+
     progenic.run({
         name: 'bagarino',
         main: '../app.js',
-        workers: 'auto',
-        devMode: (CONF.ENVIRONMENT === 'development')
+        workers: workers,
+        devMode: devMode
     });
 }
