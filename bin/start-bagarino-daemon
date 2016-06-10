@@ -51,11 +51,14 @@ else if (cmd && cmd['initconf'])
     const readStream  = fs.createReadStream(__dirname + '/../etc/bagarino.conf');
     const writeStream = fs.createWriteStream('/etc/bagarino.conf');
 
+    readStream.on('end', () =>
+    {
+        console.log('Created file "/etc/bagarino.conf"');
+
+        process.exit();
+    });
+
     readStream.pipe(writeStream);
-
-    console.log('Created file "/etc/bagarino.conf"');
-
-    process.exit();
 }
 else
 {
