@@ -42,26 +42,34 @@ These settings can be easily overridden by placing a file named _"bagarino.conf"
 This file must contain a valid JSON, organized as follows:
 ```js
 {
-	"ENVIRONMENT": "production",
+    "ENVIRONMENT": "production",
 
-	"PORT": 8124,
-	"HTTPS_PORT": 8443,
+    "PORT": 8124,
+    "HTTPS_PORT": 8443,
 
-	"SERVER_TYPE": {
-		"HTTPS": {
-			"ENABLED": false,
-			"KEY":  "private/key.pem",
-			"CERT": "private/cert.crt"
-		},
-		"HTTP": {
-			"ENABLED": true
-		}
-	},
+    "SERVER_TYPE": {
+        "HTTPS": {
+            "ENABLED": false,
+            "KEY":  "private/key.pem",
+            "CERT": "private/cert.crt"
+        },
+        "HTTP": {
+            "ENABLED": true
+        }
+    },
 
-	"LOGGING": {
-		"ENABLED": true,
-		"PATH": "/var/log"
-	}
+    "LOGGING": {
+        "ENABLED": true,
+        "PATH": "/var/log"
+    },
+
+    "REDIS": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 3
+    },
+
+    "SECONDS_TO_REMEMBER_TICKETS_UNTIL": 864000
 }
 ```
 The **"ENVIRONMENT"** key is passed to Nodejs and tells it whether to start in _production_ or _development_ mode.  

@@ -1,6 +1,6 @@
 {
   "name": "bagarino",
-  "version": "2.2.1",
+  "version": "2.2.2",
   "license": "Apache-2.0",
   "private": false,
   "repository": {
@@ -17,7 +17,7 @@
     "app.js"
   ],
   "engines": {
-    "node": ">=4.4.4"
+    "node": ">=4.4.5"
   },
   "dependencies": {
     "daemon": "^1.1.0",
