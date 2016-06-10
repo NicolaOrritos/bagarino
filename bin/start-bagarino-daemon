@@ -10,11 +10,13 @@ const options = 'Start the bagarino daemon or perform a Garbage Collection of st
               + ' \n'
               + 'Usage: \n'
               + '  bagarino [gc | gcv] [--dev] \n'
+              + '  bagarino initconf \n'
               + '  bagarino -h | --help \n'
               + ' \n'
               + 'Options: \n'
               + '  gc          Perform a Garbage Collection of stale tickets \n'
               + '  gcv         Perform Garbage Collection and be verbose about it \n'
+              + '  initconf    Create (or replace) the configuration file \n'
               + '  --h --help  Show this help \n';
 
 const cmd = docopt(options);
@@ -31,12 +33,15 @@ if (cmd && (cmd['gc'] || cmd['gcv']))
     {
         console.log('Garbage Collection performed correctly.');
         console.log('%s stale ticket(s) cleaned.', count);
+
+        process.exit();
     })
     .catch( err =>
     {
         console.log('Could not perform Garbage Collection. %s', err.stack);
-    })
-    .finally(process.exit);
+
+        process.exit();
+    });
 }
 else
 {
