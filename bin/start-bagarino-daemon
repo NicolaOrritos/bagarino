@@ -3,6 +3,9 @@
 'use strict';
 
 
+const fs = require('fs');
+
+
 // Parsing some options:
 const docopt = require('docopt').docopt;
 
@@ -16,7 +19,7 @@ const options = 'Start the bagarino daemon or perform a Garbage Collection of st
               + 'Options: \n'
               + '  gc          Perform a Garbage Collection of stale tickets \n'
               + '  gcv         Perform Garbage Collection and be verbose about it \n'
-              + '  initconf    Create (or replace) the configuration file \n'
+              + '  initconf    Create (or replace) the configuration file "/etc/bagarino.conf" \n'
               + '  --h --help  Show this help \n';
 
 const cmd = docopt(options);
@@ -40,8 +43,19 @@ if (cmd && (cmd['gc'] || cmd['gcv']))
     {
         console.log('Could not perform Garbage Collection. %s', err.stack);
 
-        process.exit();
+        process.exit(1);
     });
+}
+else if (cmd && cmd['initconf'])
+{
+    const readStream  = fs.createReadStream('../etc/bagarino.conf');
+    const writeStream = fs.createWriteStream('/etc/bagarino.conf');
+
+    readStream.pipe(writeStream);
+
+    console.log('Created file "/etc/bagarino.conf"');
+
+    process.exit();
 }
 else
 {
