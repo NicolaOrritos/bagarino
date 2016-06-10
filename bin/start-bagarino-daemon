@@ -48,7 +48,7 @@ if (cmd && (cmd['gc'] || cmd['gcv']))
 }
 else if (cmd && cmd['initconf'])
 {
-    const readStream  = fs.createReadStream('../etc/bagarino.conf');
+    const readStream  = fs.createReadStream(__dirname + '/../etc/bagarino.conf');
     const writeStream = fs.createWriteStream('/etc/bagarino.conf');
 
     readStream.pipe(writeStream);
