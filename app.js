@@ -33,17 +33,24 @@ function initAndStart(server, port)
 {
     if (server && port)
     {
+        server.on  ('NotFound',                     routes.utils.notpermitted);
+        server.on  ('MethodNotAllowed',             routes.utils.notpermitted);
+        server.on  ('uncaughtException',            routes.utils.notpermitted);
+
         server.use(restify.queryParser());
 
-        server.get('/tickets/new',                 routes.tickets.new);
-        server.get('/tickets/:ticket/status',      routes.tickets.status);
-        server.get('/tickets/:ticket/policy',      routes.tickets.policy);
-        server.get('/tickets/:ticket/expire',      routes.tickets.expire);
-        server.get('/contexts/:context/expireall', routes.contexts.expireall);
+        server.get ('/tickets/new',                 routes.tickets.new);
+        server.get ('/tickets/:ticket/status',      routes.tickets.status);
+        server.get ('/tickets/:ticket/policy',      routes.tickets.policy);
+        server.get ('/tickets/:ticket/expire',      routes.tickets.expire);
+        server.get ('/contexts/:context/expireall', routes.contexts.expireall);
 
-        server.on ('NotFound',                     routes.utils.notpermitted);
-        server.on ('MethodNotAllowed',             routes.utils.notpermitted);
-        server.on ('uncaughtException',            routes.utils.notpermitted);
+        server.use (restify.acceptParser('application/json'));
+        server.use (restify.bodyParser({maxBodySize: CONST.ONE_MiB}));
+
+        server.post('/tickets/withpayload',         routes.tickets.withpayload);
+        server.get ('/tickets/:ticket/payload',     routes.tickets.payload);
+
 
         server.listen(port, () =>
         {

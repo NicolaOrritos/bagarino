@@ -22,6 +22,7 @@ bagarino can be used as a support for a licensing server and as an helper to oth
   - [Tickets Generation Speed](#tickets-generation-speed)
   - [Lightweight Validation](#lightweight-validation)
   - [Retrieve Tickets Policy](#retrieve-tickets-policy)
+  - [Payloads](#payloads)
 - [Garbage Collection](#garbage-collection)
 
 
@@ -278,6 +279,10 @@ This way the policy for that ticket can be retrieved without the need to issue a
 You can notice that the response to a "policy" call carries some additional info about other parameters driving the ticket behavior.  
 In fact, the "more" object contains a list of settings for this ticket other than the policy type.
 For explanations about any of them see the paragraphs above in this same guide.
+
+
+### Payloads
+**TODO**
 
 
 
