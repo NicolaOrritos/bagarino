@@ -48,7 +48,7 @@ function initAndStart(server, port)
         server.use (restify.acceptParser('application/json'));
         server.use (restify.bodyParser({maxBodySize: CONST.ONE_MiB}));
 
-        server.post('/tickets/withpayload',         routes.tickets.withpayload);
+        server.post('/tickets/new/withpayload',     routes.tickets.withpayload);
         server.get ('/tickets/:ticket/payload',     routes.tickets.payload);
 
 

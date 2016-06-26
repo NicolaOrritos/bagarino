@@ -282,7 +282,26 @@ For explanations about any of them see the paragraphs above in this same guide.
 
 
 ### Payloads
-**TODO**
+In bagarino version 2.4.0 a new feature has been added: **creating tickets with a JSON payload**.
+POST-ing a request for a new ticket, with some data and to the route `/tickets/new/withpayload`
+will trigger the creation of a _traditional_ ticket which will be saved alongside those data.  
+Data are saved and accessible until the ticket expires; once expired they will be deleted and won't be accessible anymore.  
+Some limitations apply, mostly to avoid abusing of this feature:
+- No mass-creation allowed; only one ticket carrying a payload will be created each time the route is called.
+- The payload can only be max 1MB in size
+
+Here's how such tickets can be created:
+``` Bash
+# TODO
+```
+
+And this is the call that retrieves the payload of a ticket still valid:
+
+    http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/policy
+    200 OK {"payloadField": "This is a payload"}
+
+
+
 
 
 
