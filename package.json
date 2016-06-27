@@ -1,6 +1,6 @@
 {
   "name": "bagarino",
-  "version": "2.3.2",
+  "version": "2.3.3",
   "license": "Apache-2.0",
   "private": false,
   "repository": {
@@ -20,7 +20,6 @@
     "node": ">=4.4.5"
   },
   "dependencies": {
-    "daemon": "^1.1.0",
     "docopt": "^0.6.2",
     "hashids": "^1.0.2",
     "hiredis": "^0.5.0",
