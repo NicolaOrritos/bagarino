@@ -54,10 +54,17 @@ function initAndStart(server, port)
 
         server.listen(port, () =>
         {
+            let workerID = 'test';
+
+            if (cluster && cluster.worker)
+            {
+                workerID = cluster.worker.id;
+            }
+
             global.log.info('BAGARINO server listening on port %d in %s mode [worker is %s]',
                             port,
                             CONF.ENVIRONMENT,
-                            cluster.worker.id);
+                            workerID);
         });
 
         // Gracefully handle SIGTERM
