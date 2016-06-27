@@ -292,14 +292,13 @@ Some limitations apply, mostly to avoid abusing of this feature:
 
 Here's how such tickets can be created:
 ``` Bash
-curl -H "Content-Type: application/json" -X POST -d '{"payloadField":"This is a payload"}' http://localhost:8124/tickets/new/withpayload?policy=time_based&expires_in=30
-{"result":"OK","expires_in":60,"ticket":"cdf0b8c9499059b978d06d466fad69a50ef8ee02","policy":"time_based"}
+# TODO
 ```
 
 And this is the call that retrieves the payload of a ticket still valid:
 
-    http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/payload
-    200 OK {"payloadField":"This is a payload"}
+    http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/policy
+    200 OK {"payloadField": "This is a payload"}
 
 
 
