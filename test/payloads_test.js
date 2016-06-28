@@ -55,13 +55,13 @@ exports.read =
         });
     },
 
-    'Tickets with payloads - creation and payload retrieval': function(test)
+    'Tickets with payloads - creation and payload retrieval - manual_expiration': function(test)
     {
-        test.expect(9);
+        test.expect(15);
 
         const payload = {'key': 'value'};
 
-        request.post('http://localhost:8124/tickets/new/withpayload?policy=manual_expiration&expires_in=30',
+        request.post('http://localhost:8124/tickets/new/withpayload?policy=manual_expiration&can_force_expiration=true',
                      {body: payload, json: true},
                      (err, res) =>
         {
@@ -70,14 +70,14 @@ exports.read =
 
             let result = res.body;
 
-            console.log('result: %s', JSON.stringify(result));
-
             test.equal(result.result, CONST.OK);
             test.equal(result.policy, 'manual_expiration');
             test.ok(result.ticket);
 
-            request.get('http://localhost:8124/tickets/' + result.ticket + '/payload',
-                         (err2, res2) =>
+            const ticket = result.ticket;
+
+            request.get('http://localhost:8124/tickets/' + ticket + '/payload',
+                        (err2, res2) =>
             {
                 test.ifError(err2);
                 test.equal(res2.statusCode, 200);
@@ -87,7 +87,26 @@ exports.read =
                 test.ok(result);
                 test.equal(result.key, 'value');
 
-                test.done();
+                request.get('http://localhost:8124/tickets/' + ticket + '/expire', (err) =>
+                {
+                    test.ifError(err);
+
+                    request.get('http://localhost:8124/tickets/' + ticket + '/payload',
+                                (err, res) =>
+                    {
+                        test.ifError(err);
+                        test.ok(res);
+                        test.equal(res.statusCode, 200);
+
+                        result = JSON.parse(res.body);
+
+                        test.ok(result);
+                        test.equal(result.status, CONST.EXPIRED_TICKET);
+
+
+                        test.done();
+                    });
+                });
             });
         });
     }
