@@ -7,6 +7,7 @@ const fs      = require('fs');
 const cluster = require('cluster');
 const restify = require('restify');
 const Log     = require('log');
+const utils   = require('./lib/utils');
 const CONF    = require('./lib/conf');
 const CONST   = require('./lib/const');
 
@@ -33,6 +34,8 @@ function initAndStart(server, port)
 {
     if (server && port)
     {
+        server.use (utils.toobusy);  // Reject requests when too busy
+
         server.on  ('NotFound',                     routes.utils.notpermitted);
         server.on  ('MethodNotAllowed',             routes.utils.notpermitted);
         server.on  ('uncaughtException',            routes.utils.notpermitted);
