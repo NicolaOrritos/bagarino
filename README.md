@@ -292,7 +292,7 @@ Some limitations apply, mostly to avoid abusing of this feature:
 
 Here's how such tickets can be created:
 ``` Bash
-# TODO
+curl -H "Content-Type: application/json" -X POST -d '{"payloadField":"This is a payload"}' http://localhost:8124/tickets/new/withpayload?policy=manual_expiration
 ```
 
 And this is the call that retrieves the payload of a ticket still valid:
