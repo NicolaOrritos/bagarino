@@ -288,21 +288,24 @@ will trigger the creation of a _traditional_ ticket which will be saved alongsid
 Data are saved and accessible until the ticket expires; once expired they will be deleted and won't be accessible anymore.  
 Some limitations apply, mostly to avoid abusing of this feature:
 - No mass-creation allowed; only one ticket carrying a payload will be created each time the route is called.
-- The payload can only be max 1MB in size
+- The payload can be max 1MB in size
 
 Here's how such tickets can be created:
 ``` Bash
-curl -H "Content-Type: application/json" -X POST -d '{"payloadField":"This is a payload"}' http://localhost:8124/tickets/new/withpayload?policy=manual_expiration
+$ curl -H "Content-Type: application/json" -X POST -d '{"payloadField":"This is a payload"}' http://localhost:8124/tickets/new/withpayload?policy=manual_expiration
+{"result":"OK","ticket":"cfeb196b51e47f1234e4a02e52edaf45a3acde99","policy":"manual_expiration"}
 ```
 
 And this is the call that retrieves the payload of a ticket still valid:
 
-    http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/policy
-    200 OK {"payloadField": "This is a payload"}
+    http://localhost:8124/tickets/cfeb196b51e47f1234e4a02e52edaf45a3acde99/payload
+    200 OK "{\"payloadField\": \"This is a payload\"}"
 
-
-
-
+Tickets carrying a payload behave exactly as dictated by their expiration policies,
+only their payload can be treated in particular ways depending on some of these policies:
+- Auto-renewing tickets will _migrate_ their payload to new tickets created upon auto-renew
+- Payload requests to bandwidth-based tickets **affect** the bandwidth count
+- Payload requests to requests-based tickets **decrease** the number of remaining requests
 
 
 ## Garbage Collection
@@ -330,6 +333,8 @@ Got 12 key(s) to analyze...
 Garbage Collection performed correctly.
 1 stale ticket(s) cleaned.
 ```
+
+**Please note that garbage-collection of tickets with payloads destroys such payloads as well.**
 
 
 LICENSE - Apache License v2

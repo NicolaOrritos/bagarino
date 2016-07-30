@@ -36,7 +36,7 @@ exports.read =
         done();
     },
 
-    'Tickets with payloads wrong routes': function(test)
+    'Tickets with payloads wrong routes': test =>
     {
         test.expect(4);
 
@@ -55,7 +55,7 @@ exports.read =
         });
     },
 
-    'Tickets with payloads - creation and payload retrieval - manual_expiration': function(test)
+    'Tickets with payloads - creation and payload retrieval - manual_expiration': test =>
     {
         test.expect(15);
 
@@ -102,6 +102,73 @@ exports.read =
 
                         test.ok(result);
                         test.equal(result.status, CONST.EXPIRED_TICKET);
+
+
+                        test.done();
+                    });
+                });
+            });
+        });
+    },
+
+    'Tickets with payloads - auto-renewables - payload "migration"': test =>
+    {
+        test.expect(18);
+
+        const payload = {'key': 'value'};
+
+        request.post('http://localhost:8124/tickets/new/withpayload?policy=requests_based&requests=1&autorenew=true',
+                     {body: payload, json: true},
+                     (err, res) =>
+        {
+            test.ifError(err);
+            test.equal(res.statusCode, 200);
+
+            const result = res.body;
+
+            test.equal(result.result, CONST.OK);
+            test.equal(result.policy, 'requests_based');
+            test.ok(result.ticket);
+
+            let ticket = result.ticket;
+
+            request.get('http://localhost:8124/tickets/' + ticket + '/payload',
+                        (err, res) =>
+            {
+                test.ifError(err);
+                test.equal(res.statusCode, 200);
+
+                const result = JSON.parse(res.body);
+
+                test.ok(result);
+                test.equal(result.key, 'value');
+
+                request.get('http://localhost:8124/tickets/' + ticket + '/status',
+                            (err, res) =>
+                {
+                    test.ifError(err);
+                    test.equal(res.statusCode, 200);
+
+                    const result = JSON.parse(res.body);
+
+                    test.ok(result);
+
+                    test.deepEqual(result.expires_in, 0);
+                    test.ok(result.next_ticket);
+
+                    // The autorenewed new ticket:
+                    ticket = result.next_ticket;
+
+                    request.get('http://localhost:8124/tickets/' + ticket + '/payload',
+                    (err, res) =>
+                    {
+                        test.ifError(err);
+                        test.equal(res.statusCode, 200);
+
+                        const result = JSON.parse(res.body);
+
+                        test.ok(result);
+                        test.equal(result.key, 'value');
 
 
                         test.done();
