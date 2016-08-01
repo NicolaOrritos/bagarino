@@ -40,6 +40,8 @@ function initAndStart(server, port)
         server.on  ('MethodNotAllowed',             routes.utils.notpermitted);
         server.on  ('uncaughtException',            routes.utils.notpermitted);
 
+        server.get ('/status',                      routes.utils.status);
+
         server.use(restify.queryParser());
 
         server.get ('/tickets/new',                 routes.tickets.new);

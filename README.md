@@ -16,13 +16,14 @@ bagarino can be used as a support for a licensing server and as an helper to oth
   - [Valid Tickets](#valid-tickets)
   - [Expired Tickets](#expired-tickets)  
   - [Forcible Manual Expiration](#forcible-manual-expiration)
-  - [Mass-creation of tickets](#mass-creation-of-tickets)
+  - [Mass-creation of Tickets](#mass-creation-of-tickets)
   - [Tickets Contexts](#tickets-contexts)
   - [Auto-renewing Tickets](#auto-renewing-tickets)
   - [Tickets Generation Speed](#tickets-generation-speed)
   - [Lightweight Validation](#lightweight-validation)
   - [Retrieve Tickets Policy](#retrieve-tickets-policy)
   - [Payloads](#payloads)
+  - [Status Check](#status-check)
 - [Garbage Collection](#garbage-collection)
 
 
@@ -180,7 +181,7 @@ Creating the ticket without this option and subsequently calling *expire* would 
 	400 Bad Request {"status": "ERROR", "cause": "different_policy"}
 
 
-### Mass-creation of tickets
+### Mass-creation of Tickets
 It's possible to create more tickets at once by adding the paramenter "count" to the query-string of the verb _new_, followed by the number of tickets to be created.
 The maximum number of tickets that can be created this way is capped to prevent overloading the system.
 Here's a typical request for mass-creation of tickets:
@@ -306,6 +307,17 @@ only their payload can be treated in particular ways depending on some of these 
 - Auto-renewing tickets will _migrate_ their payload to new tickets created upon auto-renew
 - Payload requests to bandwidth-based tickets **affect** the bandwidth count
 - Payload requests to requests-based tickets **decrease** the number of remaining requests
+
+
+### Status Check
+An endpoint is available to check the status of the bagarino service.
+The `/status` endpoint returns a simple JSON document containing some useful information about the server, like memory, node version and other.  
+It returns `200 OK` if everything is fine:
+
+    http://localhost:8124/status
+    200 OK {"status":"OK","memory":{"rss":"~40MB","heapTotal":"~22MB","heapUsed":"~14MB"},"uptime":12.144,"node-version":"v6.3.1"}
+
+**NOTE: Do not abuse this endpoint because it's not throttled**
 
 
 ## Garbage Collection
