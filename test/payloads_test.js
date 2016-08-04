@@ -176,5 +176,71 @@ exports.read =
                 });
             });
         });
+    },
+
+    'Tickets with payloads - auto-renewables - payload affecting the number of requests': test =>
+    {
+        test.expect(18);
+
+        const payload = {'key': 'value'};
+
+        request.post('http://localhost:8124/tickets/new/withpayload?policy=requests_based&requests=2',
+                     {body: payload, json: true},
+                     (err, res) =>
+        {
+            test.ifError(err);
+            test.equal(res.statusCode, 200);
+
+            const result = res.body;
+
+            test.equal(result.result, CONST.OK);
+            test.equal(result.policy, 'requests_based');
+            test.ok(result.ticket);
+
+            let ticket = result.ticket;
+
+            request.get('http://localhost:8124/tickets/' + ticket + '/payload',
+                        (err, res) =>
+            {
+                test.ifError(err);
+                test.equal(res.statusCode, 200);
+
+                const result = JSON.parse(res.body);
+
+                test.ok(result);
+                test.equal(result.key, 'value');
+                
+
+                request.get('http://localhost:8124/tickets/' + ticket + '/status',
+                            (err, res) =>
+                {
+                    test.ifError(err);
+                    test.equal(res.statusCode, 200);
+
+                    const result = JSON.parse(res.body);
+
+                    test.ok(result);
+
+                    test.deepEqual(result.status, CONST.VALID_TICKET);
+                    test.deepEqual(result.expires_in, 0);
+
+
+                    request.get('http://localhost:8124/tickets/' + ticket + '/status',
+                    (err, res) =>
+                    {
+                        test.ifError(err);
+                        test.equal(res.statusCode, 200);
+
+                        const result = JSON.parse(res.body);
+
+                        test.ok(result);
+                        test.equal(result.status, CONST.EXPIRED_TICKET);
+
+
+                        test.done();
+                    });
+                });
+            });
+        });
     }
 };
