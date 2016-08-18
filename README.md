@@ -1,10 +1,18 @@
+
+[![NPM Downloads][npmdt-image]][npmdt-url]
+[![NPM Version][npmv-image]][npmv-url]
+[![GitHub Tag][ghtag-image]][ghtag-url]
+[![GitHub License][ghlic-image]][ghlic-url]
+[![Dependencies Status][david-image]][david-url]
+
 bagarino
 ========
-"bagarino" _sells_ you tickets and can tell a real ticket from a fake one. Simple, fast and RESTful.
+_Bagarino_ (means _"scalper"_ in Italian) generates and validates alphanumeric tickets using a number of different expiration policies.
+_Bagarino_ can tell a real ticket from a fake one. Simple, fast and RESTful.
 Ask it for a new ticket and it'll give you. Then ask it whether a ticket is still valid or expired. Or whether it is a fake. It'll know for sure.
 When tickets expire simply ask bagarino for new ones.
 
-bagarino can be used as a support for a licensing server and as an helper to other systems in an authentication/authorization scenario.
+_Bagarino_ can be used as a support for a licensing server and as an helper to other systems in an authentication/authorization scenario.
 
 
 ## Table of Contents
@@ -25,18 +33,19 @@ bagarino can be used as a support for a licensing server and as an helper to oth
   - [Payloads](#payloads)
   - [Status Check](#status-check)
 - [Garbage Collection](#garbage-collection)
+- [License](#license)
 
 
 ## Install
 	npm install -g bagarino
 
 ## Usage
-_bagarino_ needs Redis ([redis.io](http://redis.io/)) to be installed and running in order to work.
+_Bagarino_ needs Redis ([redis.io](http://redis.io/)) to be installed and running in order to work.
 To run bagarino use the following command:
 
 	sudo bagarino
 
-_bagarino_ is now up and running, listening for requests on port 8124.
+_Bagarino_ is now up and running, listening for requests on port 8124.
 
 ## Configuration
 Right out of the box _bagarino_ is configured to run with default settings that make it listen on port 8124, protocol _http_, and log to _/var/log_.  
@@ -145,7 +154,7 @@ Finally, bandwidth-based tickets can be created with the following requests:
 
 
 ### Valid tickets
-Asking for a ticket status is all you can do with a newly created ticket. bagarino will answer with three different statuses:
+Asking for a ticket status is all you can do with a newly created ticket. _bagarino_ will answer with three different statuses:
  * **VALID**
  * **EXPIRED**
  * **NOT_VALID**
@@ -162,7 +171,7 @@ The parameter *"expires_in"* has to be read based on the policy of the ticket:
 
 
 ### Expired tickets
-Expired tickets are kept in memory by bagarino for 10 days. After that time a call to their status will return "NOT_VALID" as it would for a ticket that didn't exist in the first place.
+Expired tickets are kept in memory by _bagarino_ for 10 days. After that time a call to their status will return "NOT_VALID" as it would for a ticket that didn't exist in the first place.
 
 
 ### Forcible Manual Expiration
@@ -192,7 +201,7 @@ Here's a typical request for mass-creation of tickets:
 
 ### Tickets Contexts
 Sometimes it may be useful to bound one or more tickets to a "context" so they only acquire a meaning under certain conditions.
-In bagarino this is done by attaching a textual context to the ticket during the "new" operation:
+In _bagarino_ this is done by attaching a textual context to the ticket during the "new" operation:
 
     http://localhost:8124/tickets/new?policy=requests_based&context=mysweetlittlecontext
     200 OK {"result":"OK","ticket":"7486f1dcf4fc4d3c4ef257230060aea531d42758","expires_in":100,"policy":"requests_based"}
@@ -211,7 +220,7 @@ The way to ask for a context-bound token is as follows:
 ### Auto-renewing Tickets
 A ticket created with the option _autorenew=true_ automatically generates a new one right before expiring.
 Only requests-based ones can be decorated at creation with the additional option _"autorenew"_.
-When this option is _true_ bagarino automatically spawns a new ticket when the old one's expiration is one request away,
+When this option is `true` _bagarino_ automatically spawns a new ticket when the old one's expiration is one request away,
 returning this newly created one alongside the validity/expiration info of a _"status"_ request.
 The new ticket's policy and initial TTL will be the same as the old one's.
 
@@ -246,7 +255,7 @@ Generating a ticket takes some CPU time and, under certain circumstances, this m
 Notice how the format of the tickets is different for every approach: that's a direct consequence of the speed the tickets are generated.  
 **When no generation speed is specified the default _slow_ one is used.**  
 It's almost superfluous to note that faster generation speeds are more subject to _weak_ tickets
-that can conflict across an eventual _multi-bagarinos_ environment.  
+that can conflict across an eventual _multi-bagarino-s_ environment.  
 Viceversa, slower generation speeds are more CPU-demanding although giving birth to _strong_ tickets that are almost unique.
 
 
@@ -271,7 +280,7 @@ Almost the same applies to bandwidth-based tickets, except that, for them, the n
 
 
 ### Retrieve Tickets Policy
-In bagarino version 1.10.2 a new utility call has been added, that can be used to retrieve which policy a ticket responds to:
+In _bagarino_ version 1.10.2 a new utility call has been added, that can be used to retrieve which policy a ticket responds to:
 
 	http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/policy
 	200 OK {"policy":"**requests_based**","more":{"autorenew":false,"generation_speed":"slow","can_force_expiration":false}}
@@ -283,7 +292,7 @@ For explanations about any of them see the paragraphs above in this same guide.
 
 
 ### Payloads
-In bagarino version 2.4.0 a new feature has been added: **creating tickets with a JSON payload**.
+In _bagarino_ version 2.4.0 a new feature has been added: **creating tickets with a JSON payload**.
 POST-ing a request for a new ticket, with some data and to the route `/tickets/new/withpayload`
 will trigger the creation of a _traditional_ ticket which will be saved alongside those data.  
 Data are saved and accessible until the ticket expires; once expired they will be deleted and won't be accessible anymore.  
@@ -310,7 +319,7 @@ only their payload can be treated in particular ways depending on some of these 
 
 
 ### Status Check
-An endpoint is available to check the status of the bagarino service.
+An endpoint is available to check the status of the _bagarino_ service.
 The `/status` endpoint returns a simple JSON document containing some useful information about the server, like memory, node version and other.  
 It returns `200 OK` if everything is fine:
 
@@ -348,19 +357,20 @@ Garbage Collection performed correctly.
 
 **Please note that garbage-collection of tickets with payloads destroys such payloads as well.**
 
+## License
 
-LICENSE - Apache License v2
----------------------------
-Copyright (c) 2015 Nicola Orritos
+Copyright (c) 2016 Nicola Orritos  
+Licensed under the Apache-2 license.
 
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use these files except in compliance with the License.
-You may obtain a copy of the License at
 
-   http://www.apache.org/licenses/LICENSE-2.0
 
-Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.
+[npmdt-image]: https://img.shields.io/npm/dt/bagarino.svg  "NPM Downloads"
+[npmdt-url]: https://www.npmjs.com/package/bagarino
+[npmv-image]: https://img.shields.io/npm/v/bagarino.svg  "NPM Version"
+[npmv-url]: https://www.npmjs.com/package/bagarino
+[ghtag-image]: https://img.shields.io/github/tag/NicolaOrritos/bagarino.svg  "GitHub Tag"
+[ghtag-url]: https://github.com/NicolaOrritos/bagarino/releases
+[ghlic-image]: https://img.shields.io/github/license/NicolaOrritos/bagarino.svg  "GitHub License"
+[ghlic-url]: https://github.com/NicolaOrritos/bagarino/releases
+[david-image]: https://img.shields.io/david/NicolaOrritos/bagarino.svg  "David-dm.org Dependencies Check"
+[david-url]: https://david-dm.org/NicolaOrritos/bagarino
