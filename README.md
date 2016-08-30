@@ -98,12 +98,12 @@ Here's a detailed guide on how to submit a request for creating new tickets and/
 ### New tickets
 Obtain a new ticket:
 
-    http://localhost:8124/tickets/new?policy=requests_based
+    GET http://localhost:8124/tickets/new?policy=requests_based
     200 OK {"result":"OK","ticket":"7fd88ab09e40f99767e17df27a723d05562d573b","expires_in":100,"policy":"requests_based"}
 
 See the status of the newly created ticket:
 
-    http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status
+    GET http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status
     200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
 After some requests (99 more in this case) the ticket expires. Then, asking for it again will result in the following response:
@@ -112,7 +112,7 @@ After some requests (99 more in this case) the ticket expires. Then, asking for 
 
 Asking for a non-existent ticket results in the following:
 
-    http://localhost:8124/tickets/321somenonsense123/status
+    GET http://localhost:8124/tickets/321somenonsense123/status
     404 Not Found {"status":"ERROR","cause":"not_found"}
 
 By default new tickets have a time-based expire policy and a time-to-live of 60 seconds.
@@ -125,31 +125,31 @@ A different policy can be used by specifying the _"policy"_ parameter in query-s
 
 Let's see some requests that create tickets with different expiration policies:
 
-    http://localhost:8124/tickets/new?policy=requests_based&requests=5
+    GET http://localhost:8124/tickets/new?policy=requests_based&requests=5
     200 OK {"result":"OK","ticket":"62a315cd7bdae5e84567cad9620f82b5defd3ef0","expires_in":5,"policy":"requests_based"}
 
-    http://localhost:8124/tickets/new?policy=requests_based
+    GET http://localhost:8124/tickets/new?policy=requests_based
     200 OK {"result":"OK","ticket":"0b4e20ce63f7de9a4a77910e7f909e5dba4538f3","expires_in":100,"policy":"requests_based"}
 
-    http://localhost:8124/tickets/new?policy=time_based&seconds=120
+    GET http://localhost:8124/tickets/new?policy=time_based&seconds=120
     200 OK {"result":"OK","ticket":"50ab14d6f5dd082e8ed343f7adb5f916fa76188a","expires_in":120,"policy":"time_based"}
 
-    http://localhost:8124/tickets/new?policy=cascading&depends_on=f073145dfdf45a6e85d0f758f78fd627fa301983
+    GET http://localhost:8124/tickets/new?policy=cascading&depends_on=f073145dfdf45a6e85d0f758f78fd627fa301983
     200 OK {"result":"OK","ticket":"9ae23360fb4e9b3348917eb5e9b8a8e725b0dcb0","depends_on":"f073145dfdf45a6e85d0f758f78fd627fa301983","policy":"cascading"}
 
-    http://localhost:8124/tickets/new?policy=manual_expiration
+    GET http://localhost:8124/tickets/new?policy=manual_expiration
     200 OK {"result":"OK","ticket":"f57d75c23f6a49951a6e886bbc60de74bc02ef33","policy":"manual_expiration"}
 
 When using the manual expiration policy you must call an appropriate verb to make the ticket expire:
 
-    http://localhost:8124/tickets/f57d75c23f6a49951a6e886bbc60de74bc02ef33/expire
+    GET http://localhost:8124/tickets/f57d75c23f6a49951a6e886bbc60de74bc02ef33/expire
     200 OK {"status":"EXPIRED"}
 
 Subsequent requests for that ticket will give an "EXPIRED" status.
 
 Finally, bandwidth-based tickets can be created with the following requests:
 
-	http://localhost:8124/tickets/new?policy=bandwidth_based&reqs_per_minute=100
+	GET http://localhost:8124/tickets/new?policy=bandwidth_based&reqs_per_minute=100
     200 OK {"result": "OK", "ticket": "2966c1fc73a0d78c96bdc18fb67ed99af1356b8a", "requests_per_minute": 100, "policy": "bandwidth_based"}
 
 
@@ -161,7 +161,7 @@ Asking for a ticket status is all you can do with a newly created ticket. _bagar
 
 The answer will carry some more info when the ticket is still valid:
 
-    http://localhost:8124/tickets/0b4e20ce63f7de9a4a77910e7f909e5dba4538f3/status
+    GET http://localhost:8124/tickets/0b4e20ce63f7de9a4a77910e7f909e5dba4538f3/status
     200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
 In the previous example the expiration policy and the TTL (Time-To-Live) of the ticket are returned, as well as its status.
@@ -177,12 +177,12 @@ Expired tickets are kept in memory by _bagarino_ for 10 days. After that time a 
 ### Forcible Manual Expiration
 Even tickets with a policy other than *"manual_expiration"* can be forcibly ended by calling the *expire* verb, provided that they had been created with an ad-hoc option, *"can\_force\_expiration"*:
 
-	http://localhost:8124/tickets/new?policy=requests_based&can_force_expiration=true
+	GET http://localhost:8124/tickets/new?policy=requests_based&can_force_expiration=true
     200 OK {"result": "OK", "ticket": "d81d9b01e323510ba919c0f54fbfba5b7903e326", "expires_in": 100, "policy": "requests_based"}
 
 The result will look identical to any other *requests_based*-policied ticket but the *can\_force\_expiration* option enables the call to the *expire* verb to successfully end this ticket life:
 
-	http://localhost:8124/tickets/d81d9b01e323510ba919c0f54fbfba5b7903e326/expire
+	GET http://localhost:8124/tickets/d81d9b01e323510ba919c0f54fbfba5b7903e326/expire
     200 OK {"status": "EXPIRED"}
 
 Creating the ticket without this option and subsequently calling *expire* would have produced the following error:
@@ -195,7 +195,7 @@ It's possible to create more tickets at once by adding the paramenter "count" to
 The maximum number of tickets that can be created this way is capped to prevent overloading the system.
 Here's a typical request for mass-creation of tickets:
 
-    http://localhost:8124/tickets/new?count=4
+    GET http://localhost:8124/tickets/new?count=4
     200 OK {"result":"OK","tickets":["9c7800ec9cf053e60674042533710c556fe22949","3cd5da62c2ba6d2b6b8973016264282f61f4afdd","7207c7effb2bd8fd97b885a4f72492a97e79babf","75a6cf2ba0454dfe74a4d6ce8baa80881fb76005"],"expire_in":60,"policy":"time_based"}
 
 
@@ -203,17 +203,17 @@ Here's a typical request for mass-creation of tickets:
 Sometimes it may be useful to bound one or more tickets to a "context" so they only acquire a meaning under certain conditions.
 In _bagarino_ this is done by attaching a textual context to the ticket during the "new" operation:
 
-    http://localhost:8124/tickets/new?policy=requests_based&context=mysweetlittlecontext
+    GET http://localhost:8124/tickets/new?policy=requests_based&context=mysweetlittlecontext
     200 OK {"result":"OK","ticket":"7486f1dcf4fc4d3c4ef257230060aea531d42758","expires_in":100,"policy":"requests_based"}
 
 Once it's scoped this way requests for that ticket status that don't specify the context won't be able to retrieve it, resulting in a "not_found" error, the same given when asking for a non-existent ticket:
 
-    http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status
+    GET http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status
     404 Not Found {"status":"ERROR","cause":"not_found"}
 
 The way to ask for a context-bound token is as follows:
 
-    http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status?context=mysweetlittlecontext
+    GET http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status?context=mysweetlittlecontext
     200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
 
 
@@ -226,12 +226,12 @@ The new ticket's policy and initial TTL will be the same as the old one's.
 
 Here's how an autorenew ticket is created:
 
-	http://localhost:8124/tickets/new?policy=requests_based&requests=10&autorenew=true
+	GET http://localhost:8124/tickets/new?policy=requests_based&requests=10&autorenew=true
 	200 OK {"result":"OK","expires_in":10,"ticket":"0cca33a81e4ce168f218d74692e096c676af2a25","policy":"requests_based"}
 
 After asking 9 times for this ticket validity here's what happens asking one more time:
 
-	http://localhost:8124/tickets/0cca33a81e4ce168f218d74692e096c676af2a25/status
+	GET http://localhost:8124/tickets/0cca33a81e4ce168f218d74692e096c676af2a25/status
 	200 OK {"status":"VALID","expires_in":0,"policy":"requests_based","next_ticket":"c7433c48f56bd224de43b232657165842609690b"}
 
 A new ticket, _c7433c48f56bd224de43b232657165842609690b_, is born, right when the old one expires and with the same policy and initial TTL (i.e. 10 requests).
@@ -240,15 +240,15 @@ A new ticket, _c7433c48f56bd224de43b232657165842609690b_, is born, right when th
 ### Tickets Generation Speed
 Generating a ticket takes some CPU time and, under certain circumstances, this may be an issue. To arbitrarily reduce generation time a feature is present in _bagarino_ that can be activated by passing certain values to the optional _**"generation_speed"**_ parameter.
 
-	http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=slow
+	GET http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=slow
 	200 OK
 	{"result":"OK","expires_in":30,"ticket":"e7e0dc24544cf038daf1e5f32ff0451a65a04661","policy":"time_based"}
 
-	http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=fast
+	GET http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=fast
 	200 OK
 	{"result":"OK","expires_in":30,"ticket":"BgvPnLoxr","policy":"time_based"}
 
-	http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=faster
+	GET http://localhost:8124/tickets/new?policy=time_based&seconds=30&generation_speed=faster
 	200 OK
 	{"result":"OK","expires_in":30,"ticket":"1437313717902","policy":"time_based"
 
@@ -267,13 +267,13 @@ There may be times when it's needed to check whether a ticket with one of these 
 without affecting its status.  
 At those times a "status" call can be expanded with a "light" parameter, like this:
 
-	http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/status?light=true
+	GET http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/status?light=true
 	200 OK {"status":"VALID","expires_in":100,"policy":"requests_based"}
 
 The net result, in this case for a requests-based ticket, is the call not affecting the remaining number of times the "status" call can be made for this ticket.
 I.e. Calling status on it again will show the same number of remaining "status" checks:
 
-	http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/status?light=true
+	GET http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/status?light=true
 	200 OK {"status":"VALID","expires_in":100,"policy":"requests_based"}
 
 Almost the same applies to bandwidth-based tickets, except that, for them, the number of "status" checks resets every minute.
@@ -282,7 +282,7 @@ Almost the same applies to bandwidth-based tickets, except that, for them, the n
 ### Retrieve Tickets Policy
 In _bagarino_ version 1.10.2 a new utility call has been added, that can be used to retrieve which policy a ticket responds to:
 
-	http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/policy
+	GET http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/policy
 	200 OK {"policy":"**requests_based**","more":{"autorenew":false,"generation_speed":"slow","can_force_expiration":false}}
 
 This way the policy for that ticket can be retrieved without the need to issue a "status" call on it.  
@@ -308,7 +308,7 @@ $ curl -H "Content-Type: application/json" -X POST -d '{"payloadField":"This is 
 
 And this is the call that retrieves the payload of a ticket still valid:
 
-    http://localhost:8124/tickets/cfeb196b51e47f1234e4a02e52edaf45a3acde99/payload
+    GET http://localhost:8124/tickets/cfeb196b51e47f1234e4a02e52edaf45a3acde99/payload
     200 OK "{\"payloadField\": \"This is a payload\"}"
 
 Tickets carrying a payload behave exactly as dictated by their expiration policies,
@@ -323,7 +323,7 @@ An endpoint is available to check the status of the _bagarino_ service.
 The `/status` endpoint returns a simple JSON document containing some useful information about the server, like memory, node version and other.  
 It returns `200 OK` if everything is fine:
 
-    http://localhost:8124/status
+    GET http://localhost:8124/status
     200 OK {"status":"OK","memory":{"rss":"~40MB","heapTotal":"~22MB","heapUsed":"~14MB"},"uptime":12.144,"node-version":"v6.3.1"}
 
 **NOTE: Do not abuse this endpoint because it's not throttled**
