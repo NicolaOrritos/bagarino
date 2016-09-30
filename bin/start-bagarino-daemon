@@ -3,23 +3,23 @@
 'use strict';
 
 
-const fs = require('fs');
-
-
 // Parsing some options:
 const docopt = require('docopt').docopt;
 
-const options = 'Start the bagarino daemon or perform a Garbage Collection of stale tickets \n'
+const options = 'Start/configure the bagarino daemon or perform a Garbage Collection of stale tickets \n'
               + ' \n'
               + 'Usage: \n'
-              + '  bagarino [gc | gcv] [--dev] \n'
+              + '  bagarino [--dev] \n'
+              + '  bagarino gc \n'
+              + '  bagarino gcv \n'
               + '  bagarino initconf \n'
               + '  bagarino -h | --help \n'
               + ' \n'
               + 'Options: \n'
-              + '  gc          Perform a Garbage Collection of stale tickets \n'
-              + '  gcv         Perform Garbage Collection and be verbose about it \n'
-              + '  initconf    Create (or replace) the configuration file "/etc/bagarino.conf" \n'
+              + '  gc          Perform a Garbage Collection of stale tickets without starting the daemon \n'
+              + '  gcv         Perform Garbage Collection and be verbose about it (without starting the daemon) \n'
+              + '  initconf    Create (or replace) the configuration file "/etc/bagarino.conf" without starting the daemon \n'
+              + '  --dev       Starts bagarino in development-mode, spawning only a worker \n'
               + '  --h --help  Show this help \n';
 
 const cmd = docopt(options);
@@ -48,6 +48,8 @@ if (cmd && (cmd['gc'] || cmd['gcv']))
 }
 else if (cmd && cmd['initconf'])
 {
+    const fs = require('fs');
+
     const readStream  = fs.createReadStream(__dirname + '/../etc/bagarino.conf');
     const writeStream = fs.createWriteStream('/etc/bagarino.conf');
 
@@ -58,21 +60,22 @@ else if (cmd && cmd['initconf'])
         process.exit();
     });
 
+    readStream.on( 'error', err => console.log('Error initializing the configuration. %s', err) );
+    writeStream.on('error', err => console.log('Error initializing the configuration. %s', err) );
+
     readStream.pipe(writeStream);
 }
 else
 {
-    const progenic = require('progenic');
-    const CONF     = require(__dirname + '/../lib/conf');
+    const probiotic = require('probiotic');
+    const CONF      = require(__dirname + '/../lib/conf');
 
     const devMode  = (cmd['--dev']) || (CONF.ENVIRONMENT === 'development') ? true : false;
     const workers  = devMode ? 1 : 'auto';
 
-    progenic.run({
+    probiotic.run({
         name: 'bagarino',
         main: '../app.js',
-        workers: workers,
-        devMode: devMode,
-        checkPingsEnabled: false
+        workers: workers
     });
 }
