@@ -36,6 +36,14 @@ function initAndStart(server, port)
     {
         server.use (utils.toobusy);  // Reject requests when too busy
 
+        if (CONF.CORS && CONF.CORS.ENABLED)
+        {
+            const origins = (CONF.CORS.ORIGINS && CONF.CORS.ORIGINS.length) ? CONF.CORS.ORIGINS : ['*'];
+
+            server.use(restify.CORS({ origins }));
+            server.use(restify.fullResponse());
+        }
+
         server.on  ('NotFound',                     routes.utils.notpermitted);
         server.on  ('MethodNotAllowed',             routes.utils.notpermitted);
         server.on  ('uncaughtException',            routes.utils.notpermitted);

@@ -27,7 +27,7 @@
     "node_hash": "^0.2.0",
     "probiotic": "^1.0.0",
     "redis": "^2.6.2",
-    "restify": "^4.1.1",
+    "restify": "^4.3.0",
     "sjl": "0.4.0",
     "toobusy-js": "^0.5.1"
   },
