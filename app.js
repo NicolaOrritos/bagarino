@@ -4,6 +4,7 @@
 'use strict';
 
 const fs      = require('fs');
+const CORS    = require('restify-cors-middleware');
 const cluster = require('cluster');
 const restify = require('restify');
 const Log     = require('log');
@@ -36,14 +37,6 @@ function initAndStart(server, port)
     {
         server.use (utils.toobusy);  // Reject requests when too busy
 
-        if (CONF.CORS && CONF.CORS.ENABLED)
-        {
-            const origins = (CONF.CORS.ORIGINS && CONF.CORS.ORIGINS.length) ? CONF.CORS.ORIGINS : ['*'];
-
-            server.use(restify.CORS({ origins }));
-            server.use(restify.fullResponse());
-        }
-
         server.on  ('NotFound',                     routes.utils.notpermitted);
         server.on  ('MethodNotAllowed',             routes.utils.notpermitted);
         server.on  ('uncaughtException',            routes.utils.notpermitted);
@@ -63,6 +56,20 @@ function initAndStart(server, port)
 
         server.post('/tickets/new/withpayload',     routes.tickets.withpayload);
         server.get ('/tickets/:ticket/payload',     routes.tickets.payload);
+
+
+        if (CONF.CORS && CONF.CORS.ENABLED)
+        {
+            const origins = (CONF.CORS.ORIGINS && CONF.CORS.ORIGINS.length) ? CONF.CORS.ORIGINS : [];
+            const headers = (CONF.CORS.HEADERS && CONF.CORS.HEADERS.length) ? CONF.CORS.HEADERS : [];
+
+            const cors = CORS({ origins, allowHeaders: headers });
+
+            server.pre(cors.preflight);
+            server.use(cors.actual);
+
+            server.opts(/\.*/, routes.tickets.cors);
+        }
 
 
         server.listen(port, () =>
