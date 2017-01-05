@@ -60,8 +60,11 @@ function initAndStart(server, port)
 
         if (CONF.CORS && CONF.CORS.ENABLED)
         {
-            const origins = (CONF.CORS.ORIGINS && CONF.CORS.ORIGINS.length) ? CONF.CORS.ORIGINS : [];
-            const headers = (CONF.CORS.HEADERS && CONF.CORS.HEADERS.length) ? CONF.CORS.HEADERS : [];
+            const origins = (CONF.CORS.ORIGINS && CONF.CORS.ORIGINS.length) ? CONF.CORS.ORIGINS : ['*'];
+            const headers = 'Accept, Accept-Version, Content-Type, Api-Version, Origin, X-Requested-With, '
+                          + 'Authorization, Withcredentials, X-Requested-With, X-Forwarded-For, X-Real-Ip, '
+                          + 'X-Customheader, User-Agent, Keep-Alive, Host, Accept, Connection, Upgrade, '
+                          + 'Content-Type, If-Modified-Since, Cache-Control';
 
             const cors = CORS({ origins, allowHeaders: headers });
 

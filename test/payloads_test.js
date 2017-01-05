@@ -209,7 +209,7 @@ exports.read =
 
                 test.ok(result);
                 test.equal(result.key, 'value');
-                
+
 
                 request.get('http://localhost:8124/tickets/' + ticket + '/status',
                             (err, res) =>

@@ -103,8 +103,9 @@ When **"ENABLED"** is true the **"ORIGINS"** sub-key must be populated with one 
 ```"ORIGINS": ["http://google.com", "http://twitter.com", "https://abc.xyz"]```  
 When _CORS_ is enabled but no origin is specified it will be assumed the "*" value, meaning _"all origins"_.
 
+
 ## Tickets
-Here's a detailed guide on how to submit a request for creating new tickets and/or validating old ones.
+Here's a detailed guide on how to submit requests for creating new tickets and/or validating old ones.
 
 ### New tickets
 Obtain a new ticket:
@@ -324,7 +325,7 @@ And this is the call that retrieves the payload of a ticket still valid:
 
 Tickets carrying a payload behave exactly as dictated by their expiration policies,
 only their payload can be treated in particular ways depending on some of these policies:
-- Auto-renewing tickets will _migrate_ their payload to new tickets created upon auto-renew
+- Auto-renewing tickets aren't allowed to carry a payload
 - Payload requests to bandwidth-based tickets **affect** the bandwidth count
 - Payload requests to requests-based tickets **decrease** the number of remaining requests
 
