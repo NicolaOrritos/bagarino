@@ -6,21 +6,27 @@
 // Parsing some options:
 const docopt = require('docopt').docopt;
 
-const options = 'Start/configure the bagarino daemon or perform a Garbage Collection of stale tickets \n'
+const options = 'Start/configure the bagarino daemon or perform a Garbage Collection of stale tickets or collect stats about tickets \n'
               + ' \n'
               + 'Usage: \n'
               + '  bagarino [--dev] \n'
               + '  bagarino gc \n'
               + '  bagarino gcv \n'
+              + '  bagarino stats \n'
               + '  bagarino initconf \n'
               + '  bagarino -h | --help \n'
               + ' \n'
               + 'Options: \n'
-              + '  gc          Perform a Garbage Collection of stale tickets without starting the daemon \n'
+              + '  gc          Perform a Garbage Collection of stale tickets (without starting the daemon) \n'
               + '  gcv         Perform Garbage Collection and be verbose about it (without starting the daemon) \n'
-              + '  initconf    Create (or replace) the configuration file "/etc/bagarino.conf" without starting the daemon \n'
-              + '  --dev       Starts bagarino in development-mode, spawning only a worker \n'
-              + '  --h --help  Show this help \n';
+              + '  stats       Collect and print (as JSON) statistics about the current population of tickets (without starting the daemon) \n'
+              + '  initconf    Create (or replace) the configuration file "/etc/bagarino.conf" using the default one (without starting the daemon) \n'
+              + '  --dev       Starts bagarino in development-mode, only spawning one worker \n'
+              + '  --h --help  Show this help \n'
+              + ' \n'
+              + 'Example: \n'
+              + '  echo "Starting bagarino in production mode..." \n'
+              + '  sudo bagarino \n';
 
 const cmd = docopt(options);
 
@@ -42,6 +48,24 @@ if (cmd && (cmd['gc'] || cmd['gcv']))
     .catch( err =>
     {
         console.log('Could not perform Garbage Collection. %s', err.stack);
+
+        process.exit(1);
+    });
+}
+else if (cmd && cmd['stats'])
+{
+    const stats = require('../lib/stats.js');
+
+    stats.run()
+    .then( result =>
+    {
+        console.log(JSON.stringify(result, null, 4));
+
+        process.exit();
+    })
+    .catch( err =>
+    {
+        console.log('Could not collect statistics. %s', err.stack);
 
         process.exit(1);
     });
