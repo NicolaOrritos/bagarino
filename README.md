@@ -32,6 +32,7 @@ _Bagarino_ can be used as a support for a licensing server and as an helper to o
   - [Retrieve Tickets Policy](#retrieve-tickets-policy)
   - [Payloads](#payloads)
   - [Status Check](#status-check)
+- [Statistics](#statistics)
 - [Garbage Collection](#garbage-collection)
 - [License](#license)
 
@@ -341,8 +342,38 @@ It returns `200 OK` if everything is fine:
 **NOTE: Do not abuse this endpoint because it's not throttled**
 
 
+## Statistics
+By running `bagarino stats` we can collect some statistics about the current population of tickets:  
+```Bash
+$ bagarino stats
+{
+    "tickets": {
+        "total": 282,
+        "ignored": 0,
+        "orphans": 3,
+        "policies": {
+            "requests_based": 178,
+            "time_based": 0,
+            "manual_expiration": 50,
+            "bandwidth_based": 54,
+            "cascading": 0
+        },
+        "exploration": "valid-based"
+    },
+    "duration": "0.033s"
+}
+```
+Orphan (or _"stale"_) tickets are the ones that got somehow forgotten by bagarino. They tipically are very old and can be safely deleted by performing a garbage collection (see [Garbage Collection](#garbage-collection)).  
+Some tickets may be ignored during the collection, mainly because they have been modified by hand in the Redis instance.  
+The _"exploration"_ field may be safely ignored; it's only used for debug purposes at the moment.  
+The _"duration"_ field is the total time used by bagarino to collect the stats.
+
+**NOTE: It may take quite some time to collect the statistics altough we won't degrade Redis performances by doing it**  
+NOTE: The tickets being analyzed are the ones stored inside the Redis instance currently configured (see [Configuration](#configuration))
+
+
 ## Garbage Collection
-Under some circumstances it may happen that one or more tickets become _stale_ and continue to be tracked by bagarino even if they aren't active anymore.  
+Under some circumstances it may happen that one or more old tickets become _stale_ and continue to be tracked by bagarino even if they aren't active anymore.  
 A command-line switch can be used to remove them all at once, but pay attention to some potential issues:
 - stale tickets can't be recovered after they got deleted by a garbage collection
 - a big number of stale tickets (> 100K) may cause the garbage collection to degrade bagarino performances until the cleanup ends
