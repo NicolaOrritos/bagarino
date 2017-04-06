@@ -31,248 +31,348 @@
     <!-- MAIN CONTENT -->
     <div id="main_content_wrap" class="outer">
       <section id="main_content" class="inner">
-        <h1>
-<a name="bagarino" class="anchor" href="#bagarino"><span class="octicon octicon-link"></span></a>bagarino</h1>
-
-<p>"bagarino" <em>sells</em> you tickets and can tell a real ticket from a fake one. Simple, fast and RESTful.
-Ask it for a new ticket and it'll give you. Then ask it whether a ticket is still valid or expired. Or whether it is a fake. It'll know for sure.
-When tickets expire simply ask bagarino for new ones.</p>
-
-<p>bagarino can be used as a support for a licensing server and as an helper to other systems in an authentication scenario.</p>
-
-<h2>
-<a name="install" class="anchor" href="#install"><span class="octicon octicon-link"></span></a>Install</h2>
-
-<pre><code>npm install -g bagarino
-</code></pre>
-
-<h2>
-<a name="usage" class="anchor" href="#usage"><span class="octicon octicon-link"></span></a>Usage</h2>
-
-<p><em>bagarino</em> needs Redis (<a href="http://redis.io/">http://redis.io/</a>) to be installed and running in order to work.
-To start bagarino run the following command:</p>
-
-<pre><code>sudo bagarino
-</code></pre>
-
-<p><em>bagarino</em> is now up and running, listening for requests on port 8124.</p>
-
-<h2><a name="user-content-configuration" class="anchor" href="#configuration"><span class="octicon octicon-link"></span></a>Configuration</h2>
-
-<p>Right out of the box <em>bagarino</em> is configured to run with default settings that make it listen on port 8124, protocol <em>http</em>, and log to <em>/var/log</em>.<br>
-These settings can be easily overridden by placing a file named <em>"bagarino.conf"</em> under <em>/etc</em>.
-This file must contain a valid JSON, organized as follows:</p>
-
-<div class="highlight highlight-js"><pre><span class="p">{</span>
-    <span class="s2">"ENVIRONMENT"</span><span class="o">:</span> <span class="s2">"production"</span><span class="p">,</span>
-
-    <span class="s2">"PORT"</span><span class="o">:</span> <span class="mi">8124</span><span class="p">,</span>
-    <span class="s2">"HTTPS_PORT"</span><span class="o">:</span> <span class="mi">8443</span><span class="p">,</span>
-
-    <span class="s2">"SERVER_TYPE"</span><span class="o">:</span> <span class="p">{</span>
-        <span class="s2">"HTTPS"</span><span class="o">:</span> <span class="p">{</span>
-            <span class="s2">"ENABLED"</span><span class="o">:</span> <span class="kc">false</span><span class="p">,</span>
-            <span class="s2">"KEY"</span><span class="o">:</span>  <span class="s2">"private/key.pem"</span><span class="p">,</span>
-            <span class="s2">"CERT"</span><span class="o">:</span> <span class="s2">"private/cert.crt"</span>
-        <span class="p">},</span>
-        <span class="s2">"HTTP"</span><span class="o">:</span> <span class="p">{</span>
-            <span class="s2">"ENABLED"</span><span class="o">:</span> <span class="kc">true</span>
-        <span class="p">}</span>
-    <span class="p">},</span>
-
-    <span class="s2">"LOGGING"</span><span class="o">:</span> <span class="p">{</span>
-        <span class="s2">"ENABLED"</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
-        <span class="s2">"PATH"</span><span class="o">:</span> <span class="s2">"/var/log"</span>
-    <span class="p">}</span>
-<span class="p">}</span>
-</pre></div>
-
-<p>The <strong>"ENVIRONMENT"</strong> key is passed to Nodejs and tells it whether to start in <em>production</em> or <em>development</em> mode.<br>
-The two keys <strong>"PORT"</strong> and <strong>"HTTPS_PORT"</strong> set on which port the server will be listening for incoming requests.<br>
-The <strong>"SERVER_TYPE"</strong> key enables one of the two modes <em>bagarino</em> can be started in, either simple HTTP or HTTPS.<br>
-The "HTTPS" sub-key has some more configuration in it as the paths to the key and certificate files must be provided.<br>
-Finally, the <strong>"LOGGING"</strong> key establishes under which folder the logs will be placed.</p>
-
-<h2><a name="user-content-tickets" class="anchor" href="#tickets"><span class="octicon octicon-link"></span></a>Tickets</h2>
-
-<p>Here's a detailed guide on how to submit a request for creating new tickets and/or validating old ones.</p>
-
-
-<h3><a name="new-tickets" class="anchor" href="#new-tickets"><span class="octicon octicon-link"></span></a>New tickets</h3>
-
-<p>Obtain a new ticket:</p>
-
-<pre><code>http://localhost:8124/tickets/new?policy=requests_based
-200 OK {"result":"OK","ticket":"7fd88ab09e40f99767e17df27a723d05562d573b","expires_in":100,"policy":"requests_based"}
-</code></pre>
-
-<p>See the status of the newly created ticket:</p>
-
-<pre><code>http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status
-200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
-</code></pre>
-
-<p>After some requests (99 more in this case) the ticket expires. Then, asking for it again will result in the following response:</p>
-
-<pre><code>200 OK {"status": "EXPIRED"}
-</code></pre>
-
-<p>Asking for a non-existent ticket results in the following:</p>
-
-<pre><code>http://localhost:8124/tickets/321somenonsense123/status
-404 Not Found {"status":"ERROR","cause":"not_found"}
-</code></pre>
-
-<p>By default new tickets have a time-based expire policy and a time-to-live of 60 seconds.
-A different policy can be used by specifying the <em>"policy"</em> parameter in query-string:</p>
-
-<ul>
-<li>
-<strong>policy=time_based</strong> is the default one. Add "seconds=300" to make the ticket expire after the non-default delay of 5 minutes.</li>
-<li>
-<strong>policy=requests_based</strong> makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it's 100 requests, but you can otherwise specify e.g. "requests=500" to make it last for 500 requests.</li>
-<li>
-<strong>policy=cascading</strong> makes the ticket <em>depend</em> on another one: once the <em>dependency</em> ticket expires the <em>dependent</em> one does as well.</li>
-<li>
-<strong>policy=manual_expiration</strong> makes the ticket perpetual, unless you make it expire manually by calling the <em>"expire"</em> verb (explained some lines below).</li>
-<li>
-<strong>policy=bandwidth_based</strong> makes the ticket perpetual as well, but the number of requests for it that can be done within a minute is limited.</li>
-</ul><p>Let's see some requests that create tickets with different expiration policies:</p>
-
-<pre><code>http://localhost:8124/tickets/new?policy=requests_based&amp;requests=5
-200 OK {"result":"OK","ticket":"62a315cd7bdae5e84567cad9620f82b5defd3ef0","expires_in":5,"policy":"requests_based"}
-
-http://localhost:8124/tickets/new?policy=requests_based
-200 OK {"result":"OK","ticket":"0b4e20ce63f7de9a4a77910e7f909e5dba4538f3","expires_in":100,"policy":"requests_based"}
-
-http://localhost:8124/tickets/new?policy=time_based&amp;seconds=120
-200 OK {"result":"OK","ticket":"50ab14d6f5dd082e8ed343f7adb5f916fa76188a","expires_in":120,"policy":"time_based"}
-
-http://localhost:8124/tickets/new?policy=cascading&amp;depends_on=f073145dfdf45a6e85d0f758f78fd627fa301983
-200 OK {"result":"OK","ticket":"9ae23360fb4e9b3348917eb5e9b8a8e725b0dcb0","depends_on":"f073145dfdf45a6e85d0f758f78fd627fa301983","policy":"cascading"}
-
-http://localhost:8124/tickets/new?policy=manual_expiration
-200 OK {"result":"OK","ticket":"f57d75c23f6a49951a6e886bbc60de74bc02ef33","policy":"manual_expiration"}
-</code></pre>
-
-<p>When using the manual expiration policy you must call an appropriate verb to make the ticket expire:</p>
-
-<pre><code>http://localhost:8124/tickets/f57d75c23f6a49951a6e886bbc60de74bc02ef33/expire
-200 OK {"status":"EXPIRED"}
-</code></pre>
-
-<p>Subsequent requests for that ticket will give an "EXPIRED" status.</p>
-
-<p>Finally, bandwidth-based tickets can be created with the following requests:</p>
-
-<pre><code>http://localhost:8124/tickets/new?policy=bandwidth_based&amp;reqs_per_minute=100
-200 OK {"result": "OK", "ticket": "2966c1fc73a0d78c96bdc18fb67ed99af1356b8a", "requests_per_minute": 100, "policy": "bandwidth_based"}
-</code></pre>
-
-<h3>
-<a name="valid-tickets" class="anchor" href="#valid-tickets"><span class="octicon octicon-link"></span></a>Valid tickets</h3>
-
-<p>Asking for a ticket status is all you can do with a newly created ticket. bagarino will answer with three different statuses:</p>
-
-<ul>
-<li><strong>VALID</strong></li>
-<li><strong>EXPIRED</strong></li>
-<li><strong>NOT_VALID</strong></li>
-</ul><p>The answer will carry some more info when the ticket is still valid:</p>
-
-<pre><code>http://localhost:8124/tickets/0b4e20ce63f7de9a4a77910e7f909e5dba4538f3/status
-200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
-</code></pre>
-
-<p>In the previous example the expiration policy and the TTL (Time-To-Live) of the ticket are returned, as well as its status.
-The parameter <em>"expires_in"</em> has to be read based on the policy of the ticket:</p>
-
-<ul>
-<li>When the policy is <strong>time_based</strong> then <em>"expires_in"</em> is the number of seconds before the ticket expires</li>
-<li>When the policy is <strong>requests_based</strong> the value of <em>"expires_in"</em> is the number of requests before the ticket expires</li>
-</ul>
-
-<h3>Expired tickets</h3>
-
-<p>Expired tickets are kept in memory by bagarino for 10 days. After that time a call to their status will return "NOT_VALID" as it would for a ticket that didn't exist in the first place.</p>
-
-<h3>Forceable manual expiration</h3>
-
-<p>Even tickets with a policy other than <em>"manual_expiration"</em> can be forcibly ended by calling the <em>expire</em> verb, provided that they had been created with an ad-hoc option, <em>"can_force_expiration"</em>:</p>
-
-<pre><code>http://localhost:8124/tickets/new?policy=requests_based&amp;can_force_expiration=true
-200 OK {"result": "OK", "ticket": "d81d9b01e323510ba919c0f54fbfba5b7903e326", "expires_in": 100, "policy": "requests_based"}
-</code></pre>
-
-<p>The result will look identical to any other <em>requests_based</em>-policied ticket but the <em>can_force_expiration</em> option enables the call to the <em>expire</em> verb to successfully end this ticket life:</p>
-
-<pre><code>http://localhost:8124/tickets/d81d9b01e323510ba919c0f54fbfba5b7903e326/expire
-200 OK {"status": "EXPIRED"}
-</code></pre>
-
-<p>Creating the ticket without this option and subsequently calling <em>expire</em> would have produced the following error:</p>
-
-<pre><code>400 Bad Request {"status": "ERROR", "cause": "different_policy"}
-</code></pre>
-
-<h3>Mass-creation of tickets</h3>
-
-<p>It's possible to create more tickets at once by adding the paramenter "count" to the query-string of the verb <em>new</em>, followed by the number of tickets to be created.
-The maximum number of tickets that can be created this way is capped to prevent overloading the system.
-Here's a typical request for mass-creation of tickets:</p>
-
-<pre><code>http://localhost:8124/tickets/new?count=4
-200 OK {"result":"OK","tickets":["9c7800ec9cf053e60674042533710c556fe22949","3cd5da62c2ba6d2b6b8973016264282f61f4afdd","7207c7effb2bd8fd97b885a4f72492a97e79babf","75a6cf2ba0454dfe74a4d6ce8baa80881fb76005"],"expire_in":60,"policy":"time_based"}
-</code></pre>
-
-<h3>Tickets contexts</h3>
-
-<p>Sometimes it may be useful to bound one or more tickets to a "context" so they only acquire a meaning under certain conditions.
-In bagarino this is done by attaching a textual context to the ticket during the "new" operation:</p>
-
-<pre><code>http://localhost:8124/tickets/new?policy=requests_based&amp;context=mysweetlittlecontext
-200 OK {"result":"OK","ticket":"7486f1dcf4fc4d3c4ef257230060aea531d42758","expires_in":100,"policy":"requests_based"}
-</code></pre>
-
-<p>Once it's scoped this way requests for that ticket status that don't specify the context won't be able to retrieve it, resulting in a "not_found" error, the same given when asking for a non-existent ticket:</p>
-
-<pre><code>http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status
-404 Not Found {"status":"ERROR","cause":"not_found"}
-</code></pre>
-
-<p>The way to ask for a context-bound token is as follows:</p>
-
-<pre><code>http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status?context=mysweetlittlecontext
-200 OK {"status":"VALID","expires_in":99,"policy":"requests_based"}
-</code></pre>
-
-<h3>Auto-renewing tickets</h3>
-<p>A ticket created with the option <em>autorenew=true</em> automatically generates a new one right before expiring.
-Only requests-based ones can be decorated at creation with the additional option <em>"autorenew"</em>.
-When this option is <em>true</em> bagarino automatically spawns a new ticket when the old one's expiration is one request away,
-returning this newly created one alongside the validity/expiration info of a <em>"status"</em> request.
-The new ticket's policy and initial TTL will be the same as the old one's.</p>
-<p>Here's how an autorenew ticket is created:</p>
-<pre><code>http://localhost:8124/tickets/new?policy=requests_based&amp;requests=10&amp;autorenew=true
-200 OK {"result":"OK","expires_in":10,"ticket":"0cca33a81e4ce168f218d74692e096c676af2a25","policy":"requests_based"}
-</code></pre>
-<p>After asking 9 times for this ticket validity here's what happens asking one more time:</p>
-<pre><code>http://localhost:8124/tickets/0cca33a81e4ce168f218d74692e096c676af2a25/status
-200 OK {"status":"VALID","expires_in":0,"policy":"requests_based","next_ticket":"c7433c48f56bd224de43b232657165842609690b"}
-</code></pre>
-<p>A new ticket, <em>c7433c48f56bd224de43b232657165842609690b</em>, is born, right when the old one expires and with the same policy and initial TTL.</p>
-
-<h2>LICENSE - Apache License v2</h2>
-<p>Copyright (c) 2014 Nicola Orritos</p>
-<p>Licensed under the Apache License, Version 2.0 (the "License");
-you may not use these files except in compliance with the License.
-You may obtain a copy of the License at</p>
-<p><a href="http://www.apache.org/licenses/LICENSE-2.0">http://www.apache.org/licenses/LICENSE-2.0</a></p>
-<p>Unless required by applicable law or agreed to in writing, software
-distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
-limitations under the License.</p>
+          <p><a href="https://www.npmjs.com/package/bagarino"><img src="https://img.shields.io/npm/dt/bagarino.svg" alt="NPM Downloads" title="NPM Downloads"></a>
+          <a href="https://www.npmjs.com/package/bagarino"><img src="https://img.shields.io/npm/v/bagarino.svg" alt="NPM Version" title="NPM Version"></a>
+          <a href="https://github.com/NicolaOrritos/bagarino/releases"><img src="https://img.shields.io/github/tag/NicolaOrritos/bagarino.svg" alt="GitHub Tag" title="GitHub Tag"></a>
+          <a href="https://github.com/NicolaOrritos/bagarino/releases"><img src="https://img.shields.io/github/license/NicolaOrritos/bagarino.svg" alt="GitHub License" title="GitHub License"></a>
+          <a href="https://david-dm.org/NicolaOrritos/bagarino"><img src="https://img.shields.io/david/NicolaOrritos/bagarino.svg" alt="Dependencies Status" title="David-dm.org Dependencies Check"></a></p>
+          <h1>bagarino</h1>
+          <p><em>Bagarino</em> (means <em>“scalper”</em> in Italian) generates and validates alphanumeric tickets using a number of different expiration policies.
+          <em>Bagarino</em> can tell a real ticket from a fake one. Simple, fast and RESTful.
+          Ask it for a new ticket and it’ll give you. Then ask it whether a ticket is still valid or expired. Or whether it is a fake. It’ll know for sure.
+          When tickets expire simply ask bagarino for new ones.</p>
+          <p><em>Bagarino</em> can be used as a support for a licensing server and as an helper to other systems in an authentication/authorization scenario.</p>
+          <h2>Table of Contents</h2>
+          <ul>
+          <li><a href="#install">Install</a></li>
+          <li><a href="#usage">Usage</a></li>
+          <li><a href="#configuration">Configuration</a></li>
+          <li><a href="#tickets">Tickets</a>
+          <ul>
+          <li><a href="#new-tickets">New Tickets</a></li>
+          <li><a href="#valid-tickets">Valid Tickets</a></li>
+          <li><a href="#expired-tickets">Expired Tickets</a></li>
+          <li><a href="#forcible-manual-expiration">Forcible Manual Expiration</a></li>
+          <li><a href="#mass-creation-of-tickets">Mass-creation of Tickets</a></li>
+          <li><a href="#tickets-contexts">Tickets Contexts</a></li>
+          <li><a href="#auto-renewing-tickets">Auto-renewing Tickets</a></li>
+          <li><a href="#tickets-generation-speed">Tickets Generation Speed</a></li>
+          <li><a href="#lightweight-validation">Lightweight Validation</a></li>
+          <li><a href="#retrieve-tickets-policy">Retrieve Tickets Policy</a></li>
+          <li><a href="#payloads">Payloads</a></li>
+          <li><a href="#status-check">Status Check</a></li>
+          </ul>
+          </li>
+          <li><a href="#statistics">Statistics</a></li>
+          <li><a href="#garbage-collection">Garbage Collection</a></li>
+          <li><a href="#license">License</a></li>
+          </ul>
+          <a name="install" class="anchor"><h2>Install</h2></a>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>npm&nbsp;install&nbsp;-g&nbsp;bagarino</span></span></span>
+          </div></pre>
+          <a name="usage" class="anchor"><h2>Usage</h2></a>
+          <p><em>Bagarino</em> needs Redis (<a href="http://redis.io/">redis.io</a>) to be installed and running in order to work.
+          To run bagarino use the following command:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>sudo&nbsp;bagarino</span></span></span>
+          </div></pre>
+          <p><em>Bagarino</em> is now up and running, listening for requests on port 8124.</p>
+          <a name="configuration" class="anchor"><h2>Configuration</h2></a>
+          <p>Right out of the box <em>bagarino</em> is configured to run with default settings that make it listen on port 8124, protocol <em>http</em>, and log to <em>/var/log</em>.<br>
+          These settings can be easily overridden by placing a file named <em>“bagarino.conf”</em> under <em>/etc</em>.
+          This file must contain a valid JSON, organized as follows:</p>
+          <pre class="editor-colors lang-js"><code>{
+    "ENVIRONMENT": "production",
+    "PORT": 8124,
+    "HTTPS_PORT": 8443,
+
+    "SERVER_TYPE": {
+        "HTTPS": {
+            "ENABLED": false,
+            "KEY":  "private/key.pem",
+            "CERT": "private/cert.crt"
+        },
+
+        "HTTP": {
+            "ENABLED": true
+        }
+    },
+
+    "LOGGING": {
+        "ENABLED": true,
+        "PATH": "/var/log"
+    },
+
+    "REDIS": {
+        "HOST": "localhost",
+        "PORT": 6379,
+        "DB": 3
+    },
+
+    "SECONDS_TO_REMEMBER_TICKETS_UNTIL": 864000,
+
+    "CORS":
+    {
+        "ENABLED": false,
+        "ORIGINS": []
+    }
+}</code></pre>
+          <p>This file can be generated by calling <code style="font-family: Monospace;">sudo bagarino initconf</code>.</p>
+          <p>The <strong>“ENVIRONMENT”</strong> key is passed to Nodejs and tells it whether to start in <em>production</em> or <em>development</em> mode.<br>
+          The two keys <strong>“PORT”</strong> and <strong>“HTTPS_PORT”</strong> set on which port the server will be listening for incoming requests.<br>
+          The <strong>“SERVER_TYPE”</strong> key enables one of the two modes <em>bagarino</em> can be started in, either simple HTTP or HTTPS.<br>
+          The <strong>“HTTPS”</strong> sub-key has some more configuration in it as the paths to the key and certificate files must be provided.<br>
+          The <strong>“LOGGING”</strong> key establishes under which folder the logs will be placed.<br>
+          The <strong>“REDIS”</strong> key tells <em>bagarino</em> where is the Redis instance that will be used to save tickets.<br>
+          Finally, the <strong>“CORS”</strong> key can be used to enable <a href="https://www.w3.org/TR/cors/"><em>CORS</em></a> requests on the <em>bagarino</em> service.
+          When <strong>“ENABLED”</strong> is true the <strong>“ORIGINS”</strong> sub-key must be populated with one or more hosts, like this:<br>
+          <code style="font-family: Monospace;">&quot;ORIGINS&quot;: [&quot;http://google.com&quot;, &quot;http://twitter.com&quot;, &quot;https://abc.xyz&quot;]</code><br>
+          When <em>CORS</em> is enabled but no origin is specified it will be assumed the “*” value, meaning <em>“all origins”</em>.</p>
+          <a name="tickets" class="anchor"><h2>Tickets</h2></a>
+          <p>Here’s a detailed guide on how to submit requests for creating new tickets and/or validating old ones.</p>
+          <a name="new-tickets" class="anchor"><h3>New tickets</h3></a>
+          <p>Obtain a new ticket:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=requests_based</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;ticket&quot;:&quot;7fd88ab09e40f99767e17df27a723d05562d573b&quot;,&quot;expires_in&quot;:100,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <p>See the status of the newly created ticket:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/7fd88ab09e40f99767e17df27a723d05562d573b/status</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&quot;VALID&quot;,&quot;expires_in&quot;:99,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <p>After some requests (99 more in this case) the ticket expires. Then, asking for it again will result in the following response:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&nbsp;&quot;EXPIRED&quot;}</span></span></span>
+          </div></pre>
+          <p>Asking for a non-existent ticket results in the following:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/321somenonsense123/status</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>404&nbsp;Not&nbsp;Found&nbsp;{&quot;status&quot;:&quot;ERROR&quot;,&quot;cause&quot;:&quot;not_found&quot;}</span></span></span>
+          </div></pre>
+          <p>By default new tickets have a time-based expire policy and a time-to-live of 60 seconds.
+          A different policy can be used by specifying the <em>“policy”</em> parameter in query-string:</p>
+          <ul>
+          <li><strong>policy=time_based</strong> is the default one. Add “seconds=300” to make the ticket expire after the non-default delay of 5 minutes.</li>
+          <li><strong>policy=requests_based</strong> makes the ticket expire after a certain amount of requests of its status you do to bagarino. By default it’s 100 requests, but you can otherwise specify e.g. “requests=500” to make it last for 500 requests.</li>
+          <li><strong>policy=cascading</strong> makes the ticket <em>depend</em> on another one: once the <em>dependency</em> ticket expires the <em>dependent</em> one does as well.</li>
+          <li><strong>policy=manual_expiration</strong> makes the ticket perpetual, unless you make it expire manually by calling the <em>“expire”</em> verb (explained some lines below).</li>
+          <li><strong>policy=bandwidth_based</strong> makes the ticket perpetual as well, but the number of requests for it that can be done within a minute is limited.</li>
+          </ul>
+          <p>Let’s see some requests that create tickets with different expiration policies:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=requests_based&amp;requests=5</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;ticket&quot;:&quot;62a315cd7bdae5e84567cad9620f82b5defd3ef0&quot;,&quot;expires_in&quot;:5,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span>&nbsp;</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=requests_based</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;ticket&quot;:&quot;0b4e20ce63f7de9a4a77910e7f909e5dba4538f3&quot;,&quot;expires_in&quot;:100,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span>&nbsp;</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=time_based&amp;seconds=120</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;ticket&quot;:&quot;50ab14d6f5dd082e8ed343f7adb5f916fa76188a&quot;,&quot;expires_in&quot;:120,&quot;policy&quot;:&quot;time_based&quot;}</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span>&nbsp;</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=cascading&amp;depends_on=f073145dfdf45a6e85d0f758f78fd627fa301983</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;ticket&quot;:&quot;9ae23360fb4e9b3348917eb5e9b8a8e725b0dcb0&quot;,&quot;depends_on&quot;:&quot;f073145dfdf45a6e85d0f758f78fd627fa301983&quot;,&quot;policy&quot;:&quot;cascading&quot;}</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span>&nbsp;</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=manual_expiration</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;ticket&quot;:&quot;f57d75c23f6a49951a6e886bbc60de74bc02ef33&quot;,&quot;policy&quot;:&quot;manual_expiration&quot;}</span></span></span>
+          </div></pre>
+          <p>When using the manual expiration policy you must call an appropriate verb to make the ticket expire:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/f57d75c23f6a49951a6e886bbc60de74bc02ef33/expire</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&quot;EXPIRED&quot;}</span></span></span>
+          </div></pre>
+          <p>Subsequent requests for that ticket will give an “EXPIRED” status.</p>
+          <p>Finally, bandwidth-based tickets can be created with the following requests:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=bandwidth_based&amp;reqs_per_minute=100</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&nbsp;&quot;OK&quot;,&nbsp;&quot;ticket&quot;:&nbsp;&quot;2966c1fc73a0d78c96bdc18fb67ed99af1356b8a&quot;,&nbsp;&quot;requests_per_minute&quot;:&nbsp;100,&nbsp;&quot;policy&quot;:&nbsp;&quot;bandwidth_based&quot;}</span></span></span>
+          </div></pre>
+          <a name="valid-tickets" class="anchor"><h3>Valid tickets</h3></a>
+          <p>Asking for a ticket status is all you can do with a newly created ticket. <em>bagarino</em> will answer with three different statuses:</p>
+          <ul>
+          <li><strong>VALID</strong></li>
+          <li><strong>EXPIRED</strong></li>
+          <li><strong>NOT_VALID</strong></li>
+          </ul>
+          <p>The answer will carry some more info when the ticket is still valid:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/0b4e20ce63f7de9a4a77910e7f909e5dba4538f3/status</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&quot;VALID&quot;,&quot;expires_in&quot;:99,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <p>In the previous example the expiration policy and the TTL (Time-To-Live) of the ticket are returned, as well as its status.
+          The parameter <em>“expires_in”</em> has to be read based on the policy of the ticket:</p>
+          <ul>
+          <li>When the policy is <strong>time_based</strong> then <em>“expires_in”</em> is the number of seconds before the ticket expires</li>
+          <li>When the policy is <strong>requests_based</strong> the value of <em>“expires_in”</em> is the number of requests before the ticket expires</li>
+          </ul>
+          <a name="expired-tickets" class="anchor"><h3>Expired tickets</h3></a>
+          <p>Expired tickets are kept in memory by <em>bagarino</em> for 10 days. After that time a call to their status will return “NOT_VALID” as it would for a ticket that didn’t exist in the first place.</p>
+          <a name="forcible-manual-expiration" class="anchor"><h3>Forcible Manual Expiration</h3></a>
+          <p>Even tickets with a policy other than <em>“manual_expiration”</em> can be forcibly ended by calling the <em>expire</em> verb, provided that they had been created with an ad-hoc option, <em>“can_force_expiration”</em>:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=requests_based&amp;can_force_expiration=true</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&nbsp;&quot;OK&quot;,&nbsp;&quot;ticket&quot;:&nbsp;&quot;d81d9b01e323510ba919c0f54fbfba5b7903e326&quot;,&nbsp;&quot;expires_in&quot;:&nbsp;100,&nbsp;&quot;policy&quot;:&nbsp;&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <p>The result will look identical to any other <em>requests_based</em>-policied ticket but the <em>can_force_expiration</em> option enables the call to the <em>expire</em> verb to successfully end this ticket life:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/d81d9b01e323510ba919c0f54fbfba5b7903e326/expire</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&nbsp;&quot;EXPIRED&quot;}</span></span></span>
+          </div></pre>
+          <p>Creating the ticket without this option and subsequently calling <em>expire</em> would have produced the following error:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>400&nbsp;Bad&nbsp;Request&nbsp;{&quot;status&quot;:&nbsp;&quot;ERROR&quot;,&nbsp;&quot;cause&quot;:&nbsp;&quot;different_policy&quot;}</span></span></span>
+          </div></pre>
+          <a name="mass-creation-of-tickets" class="anchor"><h3>Mass-creation of Tickets</h3></a>
+          <p>It’s possible to create more tickets at once by adding the paramenter “count” to the query-string of the verb <em>new</em>, followed by the number of tickets to be created.
+          The maximum number of tickets that can be created this way is capped to prevent overloading the system.
+          Here’s a typical request for mass-creation of tickets:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?count=4</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;tickets&quot;:[&quot;9c7800ec9cf053e60674042533710c556fe22949&quot;,&quot;3cd5da62c2ba6d2b6b8973016264282f61f4afdd&quot;,&quot;7207c7effb2bd8fd97b885a4f72492a97e79babf&quot;,&quot;75a6cf2ba0454dfe74a4d6ce8baa80881fb76005&quot;],&quot;expire_in&quot;:60,&quot;policy&quot;:&quot;time_based&quot;}</span></span></span>
+          </div></pre>
+          <a name="tickets-contexts" class="anchor"><h3>Tickets Contexts</h3></a>
+          <p>Sometimes it may be useful to bound one or more tickets to a “context” so they only acquire a meaning under certain conditions.
+          In <em>bagarino</em> this is done by attaching a textual context to the ticket during the “new” operation:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=requests_based&amp;context=mysweetlittlecontext</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;ticket&quot;:&quot;7486f1dcf4fc4d3c4ef257230060aea531d42758&quot;,&quot;expires_in&quot;:100,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <p>Once it’s scoped this way requests for that ticket status that don’t specify the context won’t be able to retrieve it, resulting in a “not_found” error, the same given when asking for a non-existent ticket:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>404&nbsp;Not&nbsp;Found&nbsp;{&quot;status&quot;:&quot;ERROR&quot;,&quot;cause&quot;:&quot;not_found&quot;}</span></span></span>
+          </div></pre>
+          <p>The way to ask for a context-bound token is as follows:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/7486f1dcf4fc4d3c4ef257230060aea531d42758/status?context=mysweetlittlecontext</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&quot;VALID&quot;,&quot;expires_in&quot;:99,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <a name="auto-renewing-tickets" class="anchor"><h3>Auto-renewing Tickets</h3></a>
+          <p>A ticket created with the option <em>autorenew=true</em> automatically generates a new one right before expiring.
+          Only requests-based ones can be decorated at creation with the additional option <em>“autorenew”</em>.
+          When this option is <code style="font-family: Monospace;">true</code> <em>bagarino</em> automatically spawns a new ticket when the old one’s expiration is one request away,
+          returning this newly created one alongside the validity/expiration info of a <em>“status”</em> request.
+          The new ticket’s policy and initial TTL will be the same as the old one’s.</p>
+          <p>Here’s how an autorenew ticket is created:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=requests_based&amp;requests=10&amp;autorenew=true</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;result&quot;:&quot;OK&quot;,&quot;expires_in&quot;:10,&quot;ticket&quot;:&quot;0cca33a81e4ce168f218d74692e096c676af2a25&quot;,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <p>After asking 9 times for this ticket validity here’s what happens asking one more time:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/0cca33a81e4ce168f218d74692e096c676af2a25/status</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&quot;VALID&quot;,&quot;expires_in&quot;:0,&quot;policy&quot;:&quot;requests_based&quot;,&quot;next_ticket&quot;:&quot;c7433c48f56bd224de43b232657165842609690b&quot;}</span></span></span>
+          </div></pre>
+          <p>A new ticket, <em>c7433c48f56bd224de43b232657165842609690b</em>, is born, right when the old one expires and with the same policy and initial TTL (i.e. 10 requests).</p>
+          <a name="tickets-generation-speed" class="anchor"><h3>Tickets Generation Speed</h3></a>
+          <p>Generating a ticket takes some CPU time and, under certain circumstances, this may be an issue. To arbitrarily reduce generation time a feature is present in <em>bagarino</em> that can be activated by passing certain values to the optional <em><strong>“generation_speed”</strong></em> parameter.</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=time_based&amp;seconds=30&amp;generation_speed=slow</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>{&quot;result&quot;:&quot;OK&quot;,&quot;expires_in&quot;:30,&quot;ticket&quot;:&quot;e7e0dc24544cf038daf1e5f32ff0451a65a04661&quot;,&quot;policy&quot;:&quot;time_based&quot;}</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span>&nbsp;</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=time_based&amp;seconds=30&amp;generation_speed=fast</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>{&quot;result&quot;:&quot;OK&quot;,&quot;expires_in&quot;:30,&quot;ticket&quot;:&quot;BgvPnLoxr&quot;,&quot;policy&quot;:&quot;time_based&quot;}</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span>&nbsp;</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new?policy=time_based&amp;seconds=30&amp;generation_speed=faster</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>{&quot;result&quot;:&quot;OK&quot;,&quot;expires_in&quot;:30,&quot;ticket&quot;:&quot;1437313717902&quot;,&quot;policy&quot;:&quot;time_based&quot;</span></span></span>
+          </div></pre>
+          <p>Notice how the format of the tickets is different for every approach: that’s a direct consequence of the speed the tickets are generated.<br>
+          <strong>When no generation speed is specified the default <em>slow</em> one is used.</strong><br>
+          It’s almost superfluous to note that faster generation speeds are more subject to <em>weak</em> tickets
+          that can conflict across an eventual <em>multi-bagarino-s</em> environment.<br>
+          Viceversa, slower generation speeds are more CPU-demanding although giving birth to <em>strong</em> tickets that are almost unique.</p>
+          <a name="lightweight-validation" class="anchor"><h3>Lightweight Validation</h3></a>
+          <p>Sometimes checking a ticket validity directly influences its status: in particular requests- or bandwidth-based tickets
+          have policies that put a direct correlation between the number of times a “status” check is called for them and their validity itself.</p>
+          <p>There may be times when it’s needed to check whether a ticket with one of these policies is valid or not,
+          without affecting its status.<br>
+          At those times a “status” call can be expanded with a “light” parameter, like this:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/status?light=true</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&quot;VALID&quot;,&quot;expires_in&quot;:100,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <p>The net result, in this case for a requests-based ticket, is the call not affecting the remaining number of times the “status” call can be made for this ticket.
+          I.e. Calling status on it again will show the same number of remaining “status” checks:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/status?light=true</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&quot;VALID&quot;,&quot;expires_in&quot;:100,&quot;policy&quot;:&quot;requests_based&quot;}</span></span></span>
+          </div></pre>
+          <p>Almost the same applies to bandwidth-based tickets, except that, for them, the number of “status” checks resets every minute.</p>
+          <a name="retrieve-tickets-policy" class="anchor"><h3>Retrieve Tickets Policy</h3></a>
+          <p>In <em>bagarino</em> version 1.10.2 a new utility call has been added, that can be used to retrieve which policy a ticket responds to:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/7ed46ccc3606ca87ce71071e4abd894abd53b972/policy</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;policy&quot;:&quot;**requests_based**&quot;,&quot;more&quot;:{&quot;autorenew&quot;:false,&quot;generation_speed&quot;:&quot;slow&quot;,&quot;can_force_expiration&quot;:false}}</span></span></span>
+          </div></pre>
+          <p>This way the policy for that ticket can be retrieved without the need to issue a “status” call on it.<br>
+          You can notice that the response to a “policy” call carries some additional info about other parameters driving the ticket behavior.<br>
+          In fact, the “more” object contains a list of settings for this ticket other than the policy type.
+          For explanations about any of them see the paragraphs above in this same guide.</p>
+          <a name="payloads" class="anchor"><h3>Payloads</h3></a>
+          <p>In <em>bagarino</em> version 2.4.0 a new feature has been added: <strong>creating tickets with a JSON payload</strong>.
+          POST-ing a request for a new ticket, with some data and to the route <code style="font-family: Monospace;">/tickets/new/withpayload</code>
+          will trigger the creation of a <em>traditional</em> ticket which will be saved alongside those data.<br>
+          Data are saved and accessible until the ticket expires; once expired they will be deleted and won’t be accessible anymore.<br>
+          Some limitations apply, mostly to avoid abusing of this feature:</p>
+          <ul>
+          <li>No mass-creation allowed; only one ticket carrying a payload will be created each time the route is called.</li>
+          <li>The payload can be max 1MB in size</li>
+          </ul>
+          <p>Here’s how such tickets can be created:</p>
+          <pre class="editor-colors lang-Bash"><div class="line"><span class="syntax--text syntax--plain syntax--null-grammar"><span>$&nbsp;curl&nbsp;-H&nbsp;&quot;Content-Type:&nbsp;application/json&quot;&nbsp;-X&nbsp;POST&nbsp;-d&nbsp;&#39;{&quot;payloadField&quot;:&quot;This&nbsp;is&nbsp;a&nbsp;payload&quot;}&#39;&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/new/withpayload?policy=manual_expiration</span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain syntax--null-grammar"><span>{&quot;result&quot;:&quot;OK&quot;,&quot;ticket&quot;:&quot;cfeb196b51e47f1234e4a02e52edaf45a3acde99&quot;,&quot;policy&quot;:&quot;manual_expiration&quot;}</span></span>
+          </div></pre>
+          <p>And this is the call that retrieves the payload of a ticket still valid:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/tickets/cfeb196b51e47f1234e4a02e52edaf45a3acde99/payload</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;&quot;{\&quot;payloadField\&quot;:&nbsp;\&quot;This&nbsp;is&nbsp;a&nbsp;payload\&quot;}&quot;</span></span></span>
+          </div></pre>
+          <p>Tickets carrying a payload behave exactly as dictated by their expiration policies,
+          only their payload can be treated in particular ways depending on some of these policies:</p>
+          <ul>
+          <li>Auto-renewing tickets aren’t allowed to carry a payload</li>
+          <li>Payload requests to bandwidth-based tickets <strong>affect</strong> the bandwidth count</li>
+          <li>Payload requests to requests-based tickets <strong>decrease</strong> the number of remaining requests</li>
+          </ul>
+          <a name="status-check" class="anchor"><h3>Status Check</h3></a>
+          <p>An endpoint is available to check the status of the <em>bagarino</em> service.
+          The <code style="font-family: Monospace;">/status</code> endpoint returns a simple JSON document containing some useful information about the server, like memory, node version and other.<br>
+          It returns <code style="font-family: Monospace;">200 OK</code> if everything is fine:</p>
+          <pre class="editor-colors lang-text"><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>GET&nbsp;</span><span class="syntax--markup syntax--underline syntax--link syntax--http syntax--hyperlink"><span>http://localhost:8124/status</span></span></span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain"><span class="syntax--meta syntax--paragraph syntax--text"><span>200&nbsp;OK&nbsp;{&quot;status&quot;:&quot;OK&quot;,&quot;memory&quot;:{&quot;rss&quot;:&quot;~40MB&quot;,&quot;heapTotal&quot;:&quot;~22MB&quot;,&quot;heapUsed&quot;:&quot;~14MB&quot;},&quot;uptime&quot;:12.144,&quot;node-version&quot;:&quot;v6.3.1&quot;}</span></span></span>
+          </div></pre>
+          <p><strong>NOTE: Do not abuse this endpoint because it’s not throttled</strong></p>
+          <a name="statistics" class="anchor"><h2>Statistics</h2></a>
+          <p>By running <code style="font-family: Monospace;">bagarino stats</code> we can collect some statistics about the current population of tickets:</p>
+          <pre class="editor-colors lang-Bash"><code>$ bagarino stats
+{
+    "tickets": {
+        "total": 282,
+        "ignored": 0,
+        "orphans": 3,
+        "policies": {
+            "requests_based": 178,
+            "time_based": 0,
+            "manual_expiration": 50,
+            "bandwidth_based": 54,
+            "cascading": 0
+        },
+
+        "exploration": "valid-based"
+    },
+
+    "duration": "0.033s"
+}</code></pre>
+          <p>Orphan (or <em>“stale”</em>) tickets are the ones that got somehow forgotten by bagarino. They tipically are very old and can be safely deleted by performing a garbage collection (see <a href="#garbage-collection">Garbage Collection</a>).<br>
+          Some tickets may be ignored during the collection, mainly because they have been modified by hand in the Redis instance.<br>
+          The <em>“exploration”</em> field may be safely ignored; it’s only used for debug purposes at the moment.<br>
+          The <em>“duration”</em> field is the total time used by bagarino to collect the stats.</p>
+          <p><strong>NOTE: It may take quite some time to collect the statistics altough we won’t degrade Redis performances by doing it</strong><br>
+          NOTE: The tickets being analyzed are the ones stored inside the Redis instance currently configured (see <a href="#configuration">Configuration</a>)</p>
+          <a name="garbage-collection" class="anchor"><h2>Garbage Collection</h2></a>
+          <p>Under some circumstances it may happen that one or more old tickets become <em>stale</em> and continue to be tracked by bagarino even if they aren’t active anymore.<br>
+          A command-line switch can be used to remove them all at once, but pay attention to some potential issues:</p>
+          <ul>
+          <li>stale tickets can’t be recovered after they got deleted by a garbage collection</li>
+          <li>a big number of stale tickets (&gt; 100K) may cause the garbage collection to degrade bagarino performances until the cleanup ends</li>
+          </ul>
+          <p>Here’s the command-line that activates the garbage collection:</p>
+          <pre class="editor-colors lang-Bash"><div class="line"><span class="syntax--text syntax--plain syntax--null-grammar"><span>bagarino&nbsp;gc</span></span>
+          </div></pre>
+          <p>Or:</p>
+          <pre class="editor-colors lang-Bash"><div class="line"><span class="syntax--text syntax--plain syntax--null-grammar"><span>bagarino&nbsp;gcv</span></span>
+          </div></pre>
+          <p>The latter is much (very much!) verbose, reporting progress for every stale ticket being deleted, so be careful when using it.</p>
+          <p>Here’s an example response from <code style="font-family: Monospace;">bagarino gc</code>:</p>
+          <pre class="editor-colors lang-Bash"><div class="line"><span class="syntax--text syntax--plain syntax--null-grammar"><span>Starting&nbsp;garbage&nbsp;collection...</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain syntax--null-grammar"><span>Got&nbsp;12&nbsp;key(s)&nbsp;to&nbsp;analyze...</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain syntax--null-grammar"><span>Garbage&nbsp;Collection&nbsp;performed&nbsp;correctly.</span></span>
+          </div><div class="line"><span class="syntax--text syntax--plain syntax--null-grammar"><span>1&nbsp;stale&nbsp;ticket(s)&nbsp;cleaned.</span></span>
+          </div></pre>
+          <p><strong>Please note that garbage-collection of tickets with payloads destroys such payloads as well.</strong></p>
+          <a name="license" class="anchor"><h2>License</h2></a>
+          <p>Copyright © 2016 Nicola Orritos<br>
+          Licensed under the Apache-2 license.</p>
       </section>
     </div>
 
