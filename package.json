@@ -28,7 +28,7 @@
     "probiotic": "1.0.3",
     "redis": "2.8.0",
     "restify": "4.3.2",
-    "restify-cors-middleware": "0.0.8",
+    "restify-cors-middleware": "1.1.0",
     "sjl": "0.4.0",
     "toobusy-js": "0.5.1"
   },
