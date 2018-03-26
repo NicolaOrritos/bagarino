@@ -37,7 +37,7 @@
     "grunt-contrib-jshint": "0.12.0",
     "grunt-contrib-nodeunit": "0.4.1",
     "grunt-contrib-watch": "0.6.1",
-    "grunt-develop": "0.2.2",
+    "grunt-develop": "0.4.0",
     "grunt-plato": "1.4.0",
     "jshint-stylish": "2.2.1",
     "load-grunt-tasks": "3.5.2",
