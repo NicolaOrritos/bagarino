@@ -43,7 +43,7 @@ function initAndStart(server, port)
 
         server.get ('/status',                      routes.utils.status);
 
-        server.use(restify.queryParser());
+        server.use (restify.plugins.queryParser());
 
         server.get ('/tickets/new',                 routes.tickets.new);
         server.get ('/tickets/:ticket/status',      routes.tickets.status);
@@ -51,8 +51,8 @@ function initAndStart(server, port)
         server.get ('/tickets/:ticket/expire',      routes.tickets.expire);
         server.get ('/contexts/:context/expireall', routes.contexts.expireall);
 
-        server.use (restify.acceptParser('application/json'));
-        server.use (restify.bodyParser({maxBodySize: CONST.ONE_MiB}));
+        server.use (restify.plugins.acceptParser('application/json'));
+        server.use (restify.plugins.bodyParser({maxBodySize: CONST.ONE_MiB}));
 
         server.post('/tickets/new/withpayload',     routes.tickets.withpayload);
         server.get ('/tickets/:ticket/payload',     routes.tickets.payload);
