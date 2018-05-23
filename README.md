@@ -414,6 +414,6 @@ Licensed under the Apache-2 license.
 [ghtag-image]: https://img.shields.io/github/tag/NicolaOrritos/bagarino.svg  "GitHub Tag"
 [ghtag-url]: https://github.com/NicolaOrritos/bagarino/releases
 [ghlic-image]: https://img.shields.io/github/license/NicolaOrritos/bagarino.svg  "GitHub License"
-[ghlic-url]: https://github.com/NicolaOrritos/bagarino/LICENSE
+[ghlic-url]: https://github.com/NicolaOrritos/bagarino/blob/master/LICENSE
 [david-image]: https://img.shields.io/david/NicolaOrritos/bagarino.svg  "David-dm.org Dependencies Check"
 [david-url]: https://david-dm.org/NicolaOrritos/bagarino
