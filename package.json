@@ -42,7 +42,7 @@
     "jshint-stylish": "2.2.1",
     "load-grunt-tasks": "3.5.2",
     "request": "2.85.0",
-    "sleep": "5.1.1",
+    "sleep": "5.2.4",
     "time-grunt": "1.4.0"
   }
 }
