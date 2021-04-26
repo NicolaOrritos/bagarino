@@ -26,7 +26,7 @@
     "log": "1.4.0",
     "node_hash": "0.2.0",
     "probiotic": "1.0.3",
-    "redis": "2.8.0",
+    "redis": "3.1.2",
     "restify": "7.2.0",
     "restify-cors-middleware": "1.1.0",
     "sjl": "0.4.0",
