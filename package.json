@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "docopt": "0.6.2",
-    "hashids": "1.1.4",
+    "hashids": "2.3.0",
     "hiredis": "0.5.0",
     "log": "1.4.0",
     "node_hash": "0.2.0",
